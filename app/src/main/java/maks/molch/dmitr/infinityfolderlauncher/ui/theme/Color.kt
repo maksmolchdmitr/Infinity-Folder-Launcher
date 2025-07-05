@@ -11,3 +11,11 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 val Green50 = Color(0xFF1C9961)
+
+val Grey50 = Color(0xFF868686)
+
+val Base0 = Color(0xFFFFFFFF)
+val Base60 = Color(0xFF727272)
+val Base90 = Color(0xFF393939)
+
+val DescriptorBackgroundColor = Color(0xB3FFFFFF)
