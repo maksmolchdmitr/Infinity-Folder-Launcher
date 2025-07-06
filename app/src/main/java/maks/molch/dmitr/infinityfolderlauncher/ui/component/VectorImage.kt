@@ -79,7 +79,7 @@ val ActiveStepperItem: ImageVector
 private var _ActiveStepperItem: ImageVector? = null
 
 
-val RightIcon: ImageVector
+val ArrowIcon: ImageVector
     get() {
         if (_RightIcon != null) {
             return _RightIcon!!

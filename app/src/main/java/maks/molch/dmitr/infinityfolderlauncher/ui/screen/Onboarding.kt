@@ -18,21 +18,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.paint
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import maks.molch.dmitr.infinityfolderlauncher.MainActivity
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.Screen
 import maks.molch.dmitr.infinityfolderlauncher.dao.OnboardingUtil
-import maks.molch.dmitr.infinityfolderlauncher.ui.component.RightIcon
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.ArrowIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.Stepper
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base60
@@ -41,6 +45,16 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.theme.DefaultFontFamily
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.DescriptorBackgroundColor
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Green50
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.InfinityFolderLauncherTheme
+
+@Preview
+@Composable
+fun PreviewOnboardingScreen() {
+    val mainActivity = MainActivity()
+    val screen = remember {
+        mutableStateOf(Screen.Onboarding)
+    }
+    OnboardingScreen(screen, OnboardingUtil(mainActivity))
+}
 
 @Composable
 fun OnboardingScreen(screen: MutableState<Screen>, onboardingUtil: OnboardingUtil) {
@@ -148,6 +162,27 @@ private fun DescriptorButtonRow(
         }
         IconButton(
             modifier = Modifier
+                .background(Green50, shape = RoundedCornerShape(12.dp)),
+            onClick = {
+                if (step.intValue != 1) {
+                    step.intValue--
+                }
+                println("Step = ${step.intValue}")
+            },
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    modifier = Modifier.rotate(180f),
+                    imageVector = ArrowIcon,
+                    contentDescription = null,
+                    tint = Base0
+                )
+            }
+        }
+        IconButton(
+            modifier = Modifier
                 .background(Green50, shape = RoundedCornerShape(12.dp))
                 .fillMaxSize(),
             onClick = {
@@ -169,7 +204,11 @@ private fun DescriptorButtonRow(
                         color = Base0,
                     )
                 }
-                Icon(imageVector = RightIcon, contentDescription = null, tint = Base0)
+                Icon(
+                    imageVector = ArrowIcon,
+                    contentDescription = null,
+                    tint = Base0
+                )
             }
         }
     }
