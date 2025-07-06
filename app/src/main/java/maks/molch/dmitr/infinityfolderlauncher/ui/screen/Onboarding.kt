@@ -141,10 +141,7 @@ private fun DescriptorButtonRow(
         if (step.intValue != 3) {
             IconButton(
                 modifier = Modifier.fillMaxHeight(),
-                onClick = {
-                    screen.value = Screen.Main
-                    onboardingUtil.setOnboardingCompleted()
-                }
+                onClick = { finish(screen, onboardingUtil) }
             ) {
                 Text("Skip")
             }
@@ -155,7 +152,7 @@ private fun DescriptorButtonRow(
                 .fillMaxSize(),
             onClick = {
                 if (step.intValue == 3) {
-                    screen.value = Screen.Main
+                    finish(screen, onboardingUtil)
                 }
                 step.intValue++
                 println("Step = ${step.intValue}")
@@ -176,4 +173,12 @@ private fun DescriptorButtonRow(
             }
         }
     }
+}
+
+private fun finish(
+    screen: MutableState<Screen>,
+    onboardingUtil: OnboardingUtil
+) {
+    screen.value = Screen.Main
+    onboardingUtil.setOnboardingCompleted()
 }

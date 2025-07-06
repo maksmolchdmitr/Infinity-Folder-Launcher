@@ -10,7 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Green50
 
-
 @Preview(showBackground = true)
 @Composable
 fun MainScreen() {
