@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,11 +15,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
@@ -35,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.RightIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.Stepper
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
@@ -44,6 +48,7 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.theme.DefaultFontFamily
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.DescriptorBackgroundColor
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Green50
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.InfinityFolderLauncherTheme
+import maks.molch.dmitr.infinityfolderlauncher.ui.theme.LogoSize
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,10 +56,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val screen = remember {
-                mutableStateOf(Screen.Onboarding)
+                mutableStateOf(Screen.Splash)
             }
             when (screen.value) {
                 Screen.Main -> MainScreen()
+                Screen.Splash -> SplashScreen(screen)
                 Screen.Onboarding -> OnboardingScreen(screen)
             }
         }
@@ -63,13 +69,43 @@ class MainActivity : ComponentActivity() {
 
 enum class Screen {
     Main,
+    Splash,
     Onboarding,
 }
 
 @Preview(showBackground = true)
 @Composable
 fun MainScreen() {
-    Text("Hi!")
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(color = Green50),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("Hi!")
+    }
+}
+
+@Composable
+private fun SplashScreen(screen: MutableState<Screen>) {
+    LaunchedEffect(key1 = true) {
+        delay(1_000)
+        screen.value = Screen.Onboarding
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(color = Green50),
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.infinity_folder_logo),
+            contentDescription = null,
+            modifier = Modifier.size(LogoSize, LogoSize),
+            alignment = Alignment.Center
+        )
+    }
 }
 
 @Composable
