@@ -20,7 +20,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,14 +50,30 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            OnboardingScreen()
+            val screen = remember {
+                mutableStateOf(Screen.Onboarding)
+            }
+            when (screen.value) {
+                Screen.Main -> MainScreen()
+                Screen.Onboarding -> OnboardingScreen(screen)
+            }
         }
     }
 }
 
+enum class Screen {
+    Main,
+    Onboarding,
+}
+
 @Preview(showBackground = true)
 @Composable
-fun OnboardingScreen() {
+fun MainScreen() {
+    Text("Hi!")
+}
+
+@Composable
+fun OnboardingScreen(screen: MutableState<Screen>) {
     InfinityFolderLauncherTheme {
         Box(
             modifier = Modifier
@@ -67,13 +85,13 @@ fun OnboardingScreen() {
                 .padding(horizontal = 16.dp, vertical = 16.dp),
             contentAlignment = Alignment.BottomEnd,
         ) {
-            Descriptor()
+            Descriptor(screen)
         }
     }
 }
 
 @Composable
-fun Descriptor() {
+fun Descriptor(screen: MutableState<Screen>) {
     Column(
         modifier = Modifier
             .height(259.dp)
@@ -90,7 +108,7 @@ fun Descriptor() {
     ) {
         val step = descriptorStepper()
         DescriptorTextBlock(step)
-        DescriptorButtonRow(step)
+        DescriptorButtonRow(step, screen)
     }
 }
 
@@ -139,7 +157,7 @@ fun DescriptorTextBlock(step: MutableIntState) {
 }
 
 @Composable
-private fun DescriptorButtonRow(step: MutableIntState) {
+private fun DescriptorButtonRow(step: MutableIntState, screen: MutableState<Screen>) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -149,7 +167,9 @@ private fun DescriptorButtonRow(step: MutableIntState) {
         if (step.intValue != 3) {
             IconButton(
                 modifier = Modifier.fillMaxHeight(),
-                onClick = {}
+                onClick = {
+                    screen.value = Screen.Main
+                }
             ) {
                 Text("Skip")
             }
@@ -159,10 +179,10 @@ private fun DescriptorButtonRow(step: MutableIntState) {
                 .background(Green50, shape = RoundedCornerShape(12.dp))
                 .fillMaxSize(),
             onClick = {
-                step.intValue++
-                if (step.intValue == 4) {
-                    step.intValue = 1
+                if (step.intValue == 3) {
+                    screen.value = Screen.Main
                 }
+                step.intValue++
                 println("Step = ${step.intValue}")
             },
         ) {
