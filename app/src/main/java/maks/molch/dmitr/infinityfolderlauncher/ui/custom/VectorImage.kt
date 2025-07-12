@@ -1,4 +1,4 @@
-package maks.molch.dmitr.infinityfolderlauncher.ui.component
+package maks.molch.dmitr.infinityfolderlauncher.ui.custom
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
@@ -7,7 +7,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-val StepperItem: ImageVector
+val Icons.StepperItem: ImageVector
     get() {
         if (_StepperItem != null) {
             return _StepperItem!!
@@ -46,7 +46,7 @@ private var _StepperItem: ImageVector? = null
 
 
 
-val ActiveStepperItem: ImageVector
+val Icons.ActiveStepperItem: ImageVector
     get() {
         if (_ActiveStepperItem != null) {
             return _ActiveStepperItem!!
@@ -79,12 +79,12 @@ val ActiveStepperItem: ImageVector
 private var _ActiveStepperItem: ImageVector? = null
 
 
-val ArrowIcon: ImageVector
+val Icons.ArrowIcon: ImageVector
     get() {
-        if (_RightIcon != null) {
-            return _RightIcon!!
+        if (_ArrowIcon != null) {
+            return _ArrowIcon!!
         }
-        _RightIcon = ImageVector.Builder(
+        _ArrowIcon = ImageVector.Builder(
             name = "RightIcon",
             defaultWidth = 24.dp,
             defaultHeight = 24.dp,
@@ -129,8 +129,8 @@ val ArrowIcon: ImageVector
             }
         }.build()
 
-        return _RightIcon!!
+        return _ArrowIcon!!
     }
 
 @Suppress("ObjectPropertyName")
-private var _RightIcon: ImageVector? = null
+private var _ArrowIcon: ImageVector? = null

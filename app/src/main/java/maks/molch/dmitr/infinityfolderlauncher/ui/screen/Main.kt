@@ -9,7 +9,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -19,6 +18,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.paint
@@ -36,8 +37,18 @@ import maks.molch.dmitr.infinityfolderlauncher.dao.putFolderName
 import maks.molch.dmitr.infinityfolderlauncher.data.Application
 import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
-import maks.molch.dmitr.infinityfolderlauncher.ui.custom.DrawableImage
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.NavBar
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.Page
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.TopBar
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.TopBarIcon
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.DrawableImage
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Cancel
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Move
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Settings
+import maks.molch.dmitr.infinityfolderlauncher.utils.toastMakeTextAndShow
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen(
     context: Context,
@@ -46,6 +57,7 @@ fun MainScreen(
     applicationDao: ApplicationDao
 ) {
     val objectNumberOnTheRow = 4
+    val editModeEnabled = remember { mutableStateOf(true) }
 
     val launcherObjects: List<LauncherObject> =
         listOf(Folder("Infinity Folder")) +
@@ -53,23 +65,52 @@ fun MainScreen(
                     ?: if (folderName == "MAIN_FOLDER") {
                         applicationDao.getInstalledApplications()
                     } else listOf())
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .paint(
-                painter = painterResource(R.drawable.infinity_folder_logo),
-                contentScale = ContentScale.Crop,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        LazyVerticalGrid(
-            modifier = Modifier.padding(16.dp),
-            columns = GridCells.Fixed(objectNumberOnTheRow),
-            verticalArrangement = Arrangement.spacedBy(32.dp),
-            horizontalArrangement = Arrangement.spacedBy(32.dp),
+    Column {
+        if (editModeEnabled.value) {
+            TopBar(
+                "Edit mode",
+                leftIcon = TopBarIcon(Icons.Settings) {
+                    context.toastMakeTextAndShow("Settings top bar")
+                },
+                firstRightIcon = TopBarIcon(Icons.Move) {
+                    context.toastMakeTextAndShow("Move top bar")
+                },
+                secondRightIcon = TopBarIcon(
+                    Icons.Cancel
+                ) {
+                    context.toastMakeTextAndShow("Cancel top bar")
+                },
+            )
+        }
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .combinedClickable(
+                    onLongClick = {
+                        editModeEnabled.value = !editModeEnabled.value
+                    },
+                    onClick = {}
+                )
+                .paint(
+                    painter = painterResource(R.drawable.infinity_folder_logo),
+                    contentScale = ContentScale.Crop,
+                ),
+            contentAlignment = Alignment.Center,
         ) {
-            items(launcherObjects) {
-                ObjectCell(context, it)
+            LazyVerticalGrid(
+                modifier = Modifier.padding(16.dp),
+                columns = GridCells.Fixed(objectNumberOnTheRow),
+                verticalArrangement = Arrangement.spacedBy(32.dp),
+                horizontalArrangement = Arrangement.spacedBy(32.dp),
+            ) {
+                items(launcherObjects) {
+                    ObjectCell(context, it)
+                }
+            }
+        }
+        if (editModeEnabled.value) {
+            NavBar(Page.Home) { page ->
+                { context.toastMakeTextAndShow("${page.name} nav bar") }
             }
         }
     }

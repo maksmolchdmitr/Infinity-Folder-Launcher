@@ -1,4 +1,4 @@
-package maks.molch.dmitr.infinityfolderlauncher.ui.custom
+package maks.molch.dmitr.infinityfolderlauncher.ui.component.custom
 
 import android.graphics.drawable.Drawable
 import androidx.appcompat.widget.AppCompatImageView

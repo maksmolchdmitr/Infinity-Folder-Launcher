@@ -36,8 +36,9 @@ import maks.molch.dmitr.infinityfolderlauncher.MainActivity
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.Screen
 import maks.molch.dmitr.infinityfolderlauncher.dao.OnboardingDao
-import maks.molch.dmitr.infinityfolderlauncher.ui.component.ArrowIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.Stepper
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.ArrowIcon
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base60
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base90
@@ -175,7 +176,7 @@ private fun DescriptorButtonRow(
             ) {
                 Icon(
                     modifier = Modifier.rotate(180f),
-                    imageVector = ArrowIcon,
+                    imageVector = Icons.ArrowIcon,
                     contentDescription = null,
                     tint = Base0
                 )
@@ -205,7 +206,7 @@ private fun DescriptorButtonRow(
                     )
                 }
                 Icon(
-                    imageVector = ArrowIcon,
+                    imageVector = Icons.ArrowIcon,
                     contentDescription = null,
                     tint = Base0
                 )

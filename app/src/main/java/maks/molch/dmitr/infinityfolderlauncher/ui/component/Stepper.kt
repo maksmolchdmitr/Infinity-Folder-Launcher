@@ -8,6 +8,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.ActiveStepperItem
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.StepperItem
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Green50
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Grey50
 
@@ -35,7 +38,7 @@ fun Stepper(step: Int) {
 private fun DisabledStep() {
     Icon(
         modifier = Modifier.size(10.dp, 10.dp),
-        imageVector = StepperItem,
+        imageVector = Icons.StepperItem,
         contentDescription = null,
         tint = Grey50
     )
@@ -45,7 +48,7 @@ private fun DisabledStep() {
 private fun ActiveStep() {
     Icon(
         modifier = Modifier.size(30.dp, 10.dp),
-        imageVector = ActiveStepperItem,
+        imageVector = Icons.ActiveStepperItem,
         contentDescription = null,
         tint = Green50,
     )
