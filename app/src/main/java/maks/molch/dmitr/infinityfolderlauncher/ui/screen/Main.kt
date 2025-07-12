@@ -1,6 +1,10 @@
 package maks.molch.dmitr.infinityfolderlauncher.ui.screen
 
-import androidx.compose.foundation.clickable
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,14 +15,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.paint
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -31,7 +33,7 @@ import maks.molch.dmitr.infinityfolderlauncher.dao.ApplicationDao
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.DrawableImage
 
 @Composable
-fun MainScreen(applicationDao: ApplicationDao) {
+fun MainScreen(context: Context, applicationDao: ApplicationDao) {
     val objectNumberOnTheRow = 4
     val applications: List<Application> = applicationDao.getInstalledApplications()
 
@@ -50,21 +52,29 @@ fun MainScreen(applicationDao: ApplicationDao) {
             verticalArrangement = Arrangement.spacedBy(32.dp),
             horizontalArrangement = Arrangement.spacedBy(32.dp),
         ) {
-            itemsIndexed(applications) { index, application ->
-                ObjectCell(index, application)
+            items(applications) {
+                ObjectCell(context, it)
             }
         }
     }
 
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ObjectCell(index: Int, application: Application) {
+fun ObjectCell(context: Context, application: Application) {
+    val packageManager: PackageManager = context.packageManager
+
     Box(
         modifier = Modifier
-            .shadow(
-                shape = RoundedCornerShape(16.dp),
-                elevation = 16.dp,
+            .combinedClickable(
+                onClick = {
+                    packageManager.getLaunchIntentForPackage(application.packageName)
+                        ?.let { intent ->
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(intent)
+                        }
+                },
             )
             .fillMaxWidth(),
         contentAlignment = Alignment.Center,
@@ -72,9 +82,6 @@ fun ObjectCell(index: Int, application: Application) {
         Column {
             DrawableImage(
                 modifier = Modifier
-                    .clickable {
-                        println("Press from $index!")
-                    }
                     .size(70.dp, 70.dp),
                 drawable = application.icon,
             )

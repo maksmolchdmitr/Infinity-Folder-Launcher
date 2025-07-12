@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
                 mutableStateOf(Screen.Splash)
             }
             when (screen.value) {
-                Screen.Main -> MainScreen(applicationDao)
+                Screen.Main -> MainScreen(this, applicationDao)
                 Screen.Splash -> SplashScreen(screen, onboardingDao)
                 Screen.Onboarding -> OnboardingScreen(screen, onboardingDao)
             }

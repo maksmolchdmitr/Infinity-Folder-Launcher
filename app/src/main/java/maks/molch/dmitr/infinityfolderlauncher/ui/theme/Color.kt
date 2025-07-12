@@ -18,4 +18,6 @@ val Base0 = Color(0xFFFFFFFF)
 val Base60 = Color(0xFF727272)
 val Base90 = Color(0xFF393939)
 
+val Base0_10Percent = Color(0xFF, 0xFF, 0xFF, 0xFF / 10)
+
 val DescriptorBackgroundColor = Color(0xB3FFFFFF)

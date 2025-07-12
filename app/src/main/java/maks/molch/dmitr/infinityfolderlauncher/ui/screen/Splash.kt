@@ -21,7 +21,7 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.theme.LogoSize
 @Composable
 fun SplashScreen(screen: MutableState<Screen>, onboardingDao: OnboardingDao) {
     LaunchedEffect(key1 = true) {
-        delay(1_000)
+        delay(100)
         screen.value = if (onboardingDao.onboardingIsCompleted()) {
             Screen.Main
         } else {
