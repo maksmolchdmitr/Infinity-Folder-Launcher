@@ -14,15 +14,15 @@ import androidx.compose.ui.res.painterResource
 import kotlinx.coroutines.delay
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.Screen
-import maks.molch.dmitr.infinityfolderlauncher.dao.OnboardingUtil
+import maks.molch.dmitr.infinityfolderlauncher.dao.OnboardingDao
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Green50
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.LogoSize
 
 @Composable
-fun SplashScreen(screen: MutableState<Screen>, onboardingUtil: OnboardingUtil) {
+fun SplashScreen(screen: MutableState<Screen>, onboardingDao: OnboardingDao) {
     LaunchedEffect(key1 = true) {
         delay(1_000)
-        screen.value = if (onboardingUtil.onboardingIsCompleted()) {
+        screen.value = if (onboardingDao.onboardingIsCompleted()) {
             Screen.Main
         } else {
             Screen.Onboarding

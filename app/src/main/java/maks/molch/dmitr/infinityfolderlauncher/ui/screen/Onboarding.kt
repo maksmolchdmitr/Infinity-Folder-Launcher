@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.sp
 import maks.molch.dmitr.infinityfolderlauncher.MainActivity
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.Screen
-import maks.molch.dmitr.infinityfolderlauncher.dao.OnboardingUtil
+import maks.molch.dmitr.infinityfolderlauncher.dao.OnboardingDao
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.ArrowIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.Stepper
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
@@ -53,11 +53,11 @@ fun PreviewOnboardingScreen() {
     val screen = remember {
         mutableStateOf(Screen.Onboarding)
     }
-    OnboardingScreen(screen, OnboardingUtil(mainActivity))
+    OnboardingScreen(screen, OnboardingDao(mainActivity))
 }
 
 @Composable
-fun OnboardingScreen(screen: MutableState<Screen>, onboardingUtil: OnboardingUtil) {
+fun OnboardingScreen(screen: MutableState<Screen>, onboardingDao: OnboardingDao) {
     InfinityFolderLauncherTheme {
         Box(
             modifier = Modifier
@@ -69,13 +69,13 @@ fun OnboardingScreen(screen: MutableState<Screen>, onboardingUtil: OnboardingUti
                 .padding(horizontal = 16.dp, vertical = 16.dp),
             contentAlignment = Alignment.BottomEnd,
         ) {
-            Descriptor(screen, onboardingUtil)
+            Descriptor(screen, onboardingDao)
         }
     }
 }
 
 @Composable
-fun Descriptor(screen: MutableState<Screen>, onboardingUtil: OnboardingUtil) {
+fun Descriptor(screen: MutableState<Screen>, onboardingDao: OnboardingDao) {
     Column(
         modifier = Modifier
             .height(259.dp)
@@ -92,7 +92,7 @@ fun Descriptor(screen: MutableState<Screen>, onboardingUtil: OnboardingUtil) {
     ) {
         val step = descriptorStepper()
         DescriptorTextBlock(step)
-        DescriptorButtonRow(step, screen, onboardingUtil)
+        DescriptorButtonRow(step, screen, onboardingDao)
     }
 }
 
@@ -144,7 +144,7 @@ fun DescriptorTextBlock(step: MutableIntState) {
 private fun DescriptorButtonRow(
     step: MutableIntState,
     screen: MutableState<Screen>,
-    onboardingUtil: OnboardingUtil,
+    onboardingDao: OnboardingDao,
 ) {
     Row(
         modifier = Modifier
@@ -155,7 +155,7 @@ private fun DescriptorButtonRow(
         if (step.intValue != 3) {
             IconButton(
                 modifier = Modifier.fillMaxHeight(),
-                onClick = { finish(screen, onboardingUtil) }
+                onClick = { finish(screen, onboardingDao) }
             ) {
                 Text("Skip")
             }
@@ -187,7 +187,7 @@ private fun DescriptorButtonRow(
                 .fillMaxSize(),
             onClick = {
                 if (step.intValue == 3) {
-                    finish(screen, onboardingUtil)
+                    finish(screen, onboardingDao)
                 }
                 step.intValue++
                 println("Step = ${step.intValue}")
@@ -216,8 +216,8 @@ private fun DescriptorButtonRow(
 
 private fun finish(
     screen: MutableState<Screen>,
-    onboardingUtil: OnboardingUtil
+    onboardingDao: OnboardingDao
 ) {
     screen.value = Screen.Main
-    onboardingUtil.setOnboardingCompleted()
+    onboardingDao.setOnboardingCompleted()
 }

@@ -3,7 +3,7 @@ package maks.molch.dmitr.infinityfolderlauncher.dao
 import android.content.Context
 import androidx.core.content.edit
 
-class OnboardingUtil(private val context: Context) {
+class OnboardingDao(private val context: Context) {
     companion object {
         const val ONBAORDING_KEY = "ONBAORDING_KEY"
         const val IS_COMPLETED_KEY = "IS_COMPLETED_KEY"
