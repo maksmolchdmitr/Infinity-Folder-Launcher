@@ -4,10 +4,10 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.graphics.drawable.Drawable
+import maks.molch.dmitr.infinityfolderlauncher.data.Application
 
 class ApplicationDao(private val context: Context) {
-    @SuppressLint("QueryPermissionsNeeded", "NewApi")
+    @SuppressLint("NewApi")
     fun getInstalledApplications(): List<Application> {
         val packageManager: PackageManager = context.packageManager
         val installedApplications: List<ApplicationInfo> = packageManager
@@ -17,22 +17,4 @@ class ApplicationDao(private val context: Context) {
             .map { appInfo -> Application(appInfo, packageManager) }
         return applicationList
     }
-}
-
-data class Application(
-    val name: String,
-    val icon: Drawable,
-    val packageName: String,
-    val category: Int,
-) {
-    @SuppressLint("NewApi")
-    constructor(
-        applicationInfo: ApplicationInfo,
-        packageManager: PackageManager
-    ) : this(
-        name = applicationInfo.loadLabel(packageManager).toString(),
-        icon = applicationInfo.loadIcon(packageManager),
-        packageName = applicationInfo.packageName,
-        category = applicationInfo.category,
-    )
 }

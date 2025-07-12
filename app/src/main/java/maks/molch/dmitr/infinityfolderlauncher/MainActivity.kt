@@ -7,7 +7,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import maks.molch.dmitr.infinityfolderlauncher.dao.ApplicationDao
+import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
 import maks.molch.dmitr.infinityfolderlauncher.dao.OnboardingDao
+import maks.molch.dmitr.infinityfolderlauncher.dao.getFolderName
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.MainScreen
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.OnboardingScreen
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.SplashScreen
@@ -15,16 +17,20 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.screen.SplashScreen
 class MainActivity : ComponentActivity() {
     private val onboardingDao by lazy { OnboardingDao(this) }
     private val applicationDao by lazy { ApplicationDao(this) }
+    private val folderDao by lazy { FolderDao(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val folderName: String = getFolderName()
+
         enableEdgeToEdge()
         setContent {
             val screen = remember {
                 mutableStateOf(Screen.Splash)
             }
             when (screen.value) {
-                Screen.Main -> MainScreen(this, applicationDao)
+                Screen.Main -> MainScreen(this, folderName, folderDao, applicationDao)
                 Screen.Splash -> SplashScreen(screen, onboardingDao)
                 Screen.Onboarding -> OnboardingScreen(screen, onboardingDao)
             }
