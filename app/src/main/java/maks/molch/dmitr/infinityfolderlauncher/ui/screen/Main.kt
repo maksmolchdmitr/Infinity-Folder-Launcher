@@ -36,6 +36,7 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Cancel
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Move
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Settings
+import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Red70
 import maks.molch.dmitr.infinityfolderlauncher.utils.toastMakeTextAndShow
 
 @SuppressLint("MutableCollectionMutableState")
@@ -49,6 +50,10 @@ fun MainScreen(
 ) {
     val objectNumberOnTheRow = 4
     val editModeEnabled = remember { mutableStateOf(false) }
+    val selectedObjectNames: MutableState<MutableSet<String>> = remember {
+        mutableStateOf(hashSetOf())
+    }
+    val objectsWasSelected: MutableState<Boolean> = remember { mutableStateOf(false) }
 
     val launcherObjects: List<LauncherObject> =
         folderDao.getFolderByName(folderName)?.launcherObjects
@@ -66,11 +71,16 @@ fun MainScreen(
                 leftIcon = TopBarIcon(Icons.Settings) {
                     context.toastMakeTextAndShow("Settings top bar")
                 },
-                firstRightIcon = TopBarIcon(Icons.Move) {
+                firstRightIcon = TopBarIcon(
+                    icon = Icons.Move,
+                    enabled = objectsWasSelected,
+                ) {
                     context.toastMakeTextAndShow("Move top bar")
                 },
                 secondRightIcon = TopBarIcon(
-                    Icons.Cancel
+                    Icons.Cancel,
+                    enabled = objectsWasSelected,
+                    color = Red70,
                 ) {
                     context.toastMakeTextAndShow("Cancel top bar")
                 },
@@ -91,7 +101,6 @@ fun MainScreen(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            val selectedObjectNames: MutableState<MutableSet<String>> = remember { mutableStateOf(hashSetOf()) }
             LazyVerticalGrid(
                 modifier = Modifier.padding(16.dp),
                 columns = GridCells.Fixed(objectNumberOnTheRow),
@@ -105,6 +114,7 @@ fun MainScreen(
                         editModeEnabled,
                         remember { mutableStateOf(ObjectCellState.SelectionBlank) },
                         selectedObjectNames,
+                        objectsWasSelected,
                     )
                 }
             }

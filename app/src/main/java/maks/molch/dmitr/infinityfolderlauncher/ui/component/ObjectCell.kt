@@ -43,6 +43,7 @@ fun ObjectCell(
     editModeEnabled: MutableState<Boolean>,
     state: MutableState<ObjectCellState> = remember { mutableStateOf(ObjectCellState.Default) },
     selectedObjectNames: MutableState<MutableSet<String>>,
+    objectsWasSelected: MutableState<Boolean>,
 ) {
     val packageManager: PackageManager = context.packageManager
     val boxSize: MutableState<IntSize> = remember { mutableStateOf(IntSize(1, 1)) }
@@ -57,10 +58,14 @@ fun ObjectCell(
                     if (editModeEnabled.value) {
                         state.value = if (state.value == ObjectCellState.SelectionBlank) {
                             selectedObjectNames.value.add(launcherObject.name)
+                            objectsWasSelected.value = true
                             println("Selected object names: $selectedObjectNames")
                             ObjectCellState.SelectionMarked
                         } else {
                             selectedObjectNames.value.remove(launcherObject.name)
+                            if (selectedObjectNames.value.isEmpty()) {
+                                objectsWasSelected.value = false
+                            }
                             println("Selected object names: $selectedObjectNames")
                             ObjectCellState.SelectionBlank
                         }
