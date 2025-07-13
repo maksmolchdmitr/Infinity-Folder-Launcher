@@ -48,11 +48,14 @@ fun MainScreen(
     val editModeEnabled = remember { mutableStateOf(false) }
 
     val launcherObjects: List<LauncherObject> =
-        listOf(Folder("Infinity Folder")) +
-                (folderDao.getFolderByName(folderName)?.launcherObjects
-                    ?: if (folderName == "MAIN_FOLDER") {
-                        applicationDao.getInstalledApplications()
-                    } else listOf())
+        folderDao.getFolderByName(folderName)?.launcherObjects
+            ?: run {
+                val folderObjects: List<LauncherObject> = if (folderName == "MAIN_FOLDER") {
+                    applicationDao.getInstalledApplications()
+                } else listOf()
+                folderDao.saveFolder(Folder(folderName, folderObjects))
+                return@run folderObjects
+            }
     Column {
         if (editModeEnabled.value) {
             TopBar(
