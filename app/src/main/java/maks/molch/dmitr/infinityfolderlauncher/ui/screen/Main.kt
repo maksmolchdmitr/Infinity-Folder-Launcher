@@ -1,5 +1,6 @@
 package maks.molch.dmitr.infinityfolderlauncher.ui.screen
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -11,6 +12,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -36,6 +38,7 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Move
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Settings
 import maks.molch.dmitr.infinityfolderlauncher.utils.toastMakeTextAndShow
 
+@SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen(
@@ -88,6 +91,7 @@ fun MainScreen(
                 ),
             contentAlignment = Alignment.Center,
         ) {
+            val selectedObjectNames: MutableState<MutableSet<String>> = remember { mutableStateOf(hashSetOf()) }
             LazyVerticalGrid(
                 modifier = Modifier.padding(16.dp),
                 columns = GridCells.Fixed(objectNumberOnTheRow),
@@ -100,6 +104,7 @@ fun MainScreen(
                         it,
                         editModeEnabled,
                         remember { mutableStateOf(ObjectCellState.SelectionBlank) },
+                        selectedObjectNames,
                     )
                 }
             }

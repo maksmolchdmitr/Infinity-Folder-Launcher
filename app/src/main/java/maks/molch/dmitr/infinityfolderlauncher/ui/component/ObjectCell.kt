@@ -42,21 +42,26 @@ fun ObjectCell(
     launcherObject: LauncherObject,
     editModeEnabled: MutableState<Boolean>,
     state: MutableState<ObjectCellState> = remember { mutableStateOf(ObjectCellState.Default) },
+    selectedObjectNames: MutableState<MutableSet<String>>,
 ) {
     val packageManager: PackageManager = context.packageManager
     val boxSize: MutableState<IntSize> = remember { mutableStateOf(IntSize(1, 1)) }
+
     Box(
         modifier = Modifier
             .onGloballyPositioned { layoutCoordinates ->
                 boxSize.value = layoutCoordinates.size
-                println(layoutCoordinates.size)
             }
             .combinedClickable(
                 onClick = {
                     if (editModeEnabled.value) {
                         state.value = if (state.value == ObjectCellState.SelectionBlank) {
+                            selectedObjectNames.value.add(launcherObject.name)
+                            println("Selected object names: $selectedObjectNames")
                             ObjectCellState.SelectionMarked
                         } else {
+                            selectedObjectNames.value.remove(launcherObject.name)
+                            println("Selected object names: $selectedObjectNames")
                             ObjectCellState.SelectionBlank
                         }
                         return@combinedClickable
