@@ -16,6 +16,8 @@ val Grey50 = Color(0xFF868686)
 
 val Base0 = Color(0xFFFFFFFF)
 val Base10 = Color(0xFFDDDDDD)
+val Base20 = Color(0xFFC6C6C6)
+val Base40 = Color(0xFF9B9B9B)
 val Base50 = Color(0xFF868686)
 val Base60 = Color(0xFF727272)
 val Base70 = Color(0xFF5E5E5E)

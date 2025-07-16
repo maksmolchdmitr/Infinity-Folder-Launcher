@@ -1,4 +1,4 @@
-package maks.molch.dmitr.infinityfolderlauncher.ui.component
+package maks.molch.dmitr.infinityfolderlauncher.ui.component.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

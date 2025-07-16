@@ -36,7 +36,7 @@ import maks.molch.dmitr.infinityfolderlauncher.MainActivity
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.Screen
 import maks.molch.dmitr.infinityfolderlauncher.dao.OnboardingDao
-import maks.molch.dmitr.infinityfolderlauncher.ui.component.Stepper
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Stepper
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.ArrowIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0

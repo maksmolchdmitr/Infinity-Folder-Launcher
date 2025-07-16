@@ -1,4 +1,4 @@
-package maks.molch.dmitr.infinityfolderlauncher.ui.component
+package maks.molch.dmitr.infinityfolderlauncher.ui.component.common
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
