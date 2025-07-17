@@ -10,19 +10,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import maks.molch.dmitr.infinityfolderlauncher.R
+import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
+import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.ClickableIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Dropdown
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.DropdownItem
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Input
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.FolderSearch
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
-import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Settings
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base20
 
 @Composable
-fun FolderSearch() {
+fun FolderSearch(folderDao: FolderDao) {
     val dropdownOn = remember { mutableStateOf(false) }
+    val allFolders: List<Folder> = folderDao.getAllFolders()
     Column(
         modifier = Modifier
             .background(shape = RoundedCornerShape(12.dp), color = Base0)
@@ -40,10 +43,13 @@ fun FolderSearch() {
         )
         if (dropdownOn.value) {
             Dropdown(
-                List(25) { index ->
+                allFolders.map { folder ->
+                    val icon = folder.iconName?.let { Icons.folderIconByName(it) }
+                        ?: R.drawable.infinity_folder_logo
                     DropdownItem(
-                        icon = Icons.Settings,
-                        name = "Settings $index",
+                        icon = icon,
+                        onClick = {},
+                        name = folder.name,
                     )
                 }
             )

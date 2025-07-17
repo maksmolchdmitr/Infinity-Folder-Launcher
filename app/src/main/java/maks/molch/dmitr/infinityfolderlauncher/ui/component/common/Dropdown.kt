@@ -14,11 +14,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.Image
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.ImageSource
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base20
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.DefaultFontFamily
@@ -47,7 +48,7 @@ fun DropdownRow(dropdownItem: DropdownItem) {
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Image(
-            imageVector = dropdownItem.icon,
+            imageSource = dropdownItem.icon,
             modifier = Modifier.size(39.dp)
         )
         Text(
@@ -61,7 +62,13 @@ fun DropdownRow(dropdownItem: DropdownItem) {
 }
 
 data class DropdownItem(
-    val icon: ImageVector,
+    val icon: ImageSource,
     val name: String,
     val onClick: (() -> Unit)? = null,
-)
+) {
+    constructor(icon: Any, onClick: () -> Unit, name: String) : this(
+        ImageSource.from(icon) ?: ImageSource.Resource(R.drawable.infinity_folder_logo),
+        name,
+        onClick,
+    )
+}

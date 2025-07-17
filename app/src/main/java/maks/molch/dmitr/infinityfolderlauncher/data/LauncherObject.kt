@@ -11,6 +11,7 @@ sealed class LauncherObject(
 data class Folder(
     override val name: String,
     val launcherObjects: List<LauncherObject> = mutableListOf(),
+    val iconName: String? = null,
 ) : LauncherObject(name)
 
 class Application(

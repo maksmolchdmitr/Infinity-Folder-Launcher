@@ -24,6 +24,12 @@ class FolderDao(context: Context) {
             Folder::class.java
         )
     }
+
+    fun getAllFolders(): List<Folder> {
+        return folderSharedPreferences.all.map { folderNameWithJson ->
+            converter.fromJson(folderNameWithJson.value as String, Folder::class.java)
+        }
+    }
 }
 
 fun Activity.getFolderName(): String =

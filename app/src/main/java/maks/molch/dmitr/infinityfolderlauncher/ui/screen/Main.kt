@@ -157,11 +157,13 @@ fun MainScreen(
         Box(
             modifier = Modifier
                 .background(Color.Unspecified)
-                .clickable { }
+                .clickable {
+                    moveObjectsEnabled.value = false
+                }
                 .fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            FolderSearch()
+            FolderSearch(folderDao)
         }
     }
 }
