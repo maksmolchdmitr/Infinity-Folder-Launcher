@@ -31,9 +31,9 @@ import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.dao.ApplicationDao
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
-import maks.molch.dmitr.infinityfolderlauncher.ui.component.FolderSearch
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.ObjectCell
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.ObjectCellState
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.SelectFolder
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.NavBar
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Page
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TopBar
@@ -154,7 +154,7 @@ fun MainScreen(
                 .fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            FolderSearch(
+            SelectFolder(
                 folderDao,
                 currentFolderName,
                 selectedObjects,

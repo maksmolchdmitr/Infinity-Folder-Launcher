@@ -31,7 +31,7 @@ class FolderDao(context: Context) {
 
     fun getFoldersByQuery(query: String): List<Folder> {
         return folderSharedPreferences.all
-            .filter { it.key.lowercase().matches(Regex(".*${query.lowercase()}.*")) }
+            .filter { it.key.lowercase().contains(query.lowercase()) }
             .map { folderNameWithJson ->
                 converter.fromJson(folderNameWithJson.value as String, Folder::class.java)
             }
