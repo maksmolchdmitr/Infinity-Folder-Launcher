@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.dao.ApplicationDao
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
-import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.FolderSearch
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.ObjectCell
@@ -46,30 +45,31 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Settings
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Red70
 import maks.molch.dmitr.infinityfolderlauncher.utils.toastMakeTextAndShow
 
-const val DEBUG_ENABLED = true
-
 @SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen(
     context: Context,
-    folderName: String,
+    currentFolderName: String,
     folderDao: FolderDao,
     applicationDao: ApplicationDao
 ) {
     val objectNumberOnTheRow = 4
     val editModeEnabled = remember {
-        mutableStateOf(false || DEBUG_ENABLED)
+        mutableStateOf(false)
     }
     val objectsWasSelected: MutableState<Boolean> = remember {
-        mutableStateOf(false || DEBUG_ENABLED)
+        mutableStateOf(false)
     }
     val moveObjectsEnabled = remember {
-        mutableStateOf(false || DEBUG_ENABLED)
+        mutableStateOf(false)
     }
-    val selectedObjectNames: MutableState<MutableSet<String>> = remember {
+    val selectedObjects: MutableState<MutableSet<LauncherObject>> = remember {
         mutableStateOf(hashSetOf())
     }
+
+    val launcherObjects: List<LauncherObject> =
+        folderDao.getFolderOrSaveByName(currentFolderName).launcherObjects
 
     BackHandler(enabled = editModeEnabled.value && moveObjectsEnabled.value) {
         moveObjectsEnabled.value = false
@@ -78,15 +78,6 @@ fun MainScreen(
         editModeEnabled.value = false
     }
 
-    val launcherObjects: List<LauncherObject> =
-        folderDao.getFolderByName(folderName)?.launcherObjects
-            ?: run {
-                val folderObjects: List<LauncherObject> = if (folderName == "MAIN_FOLDER") {
-                    applicationDao.getInstalledApplications()
-                } else listOf()
-                folderDao.saveFolder(Folder(folderName, folderObjects))
-                return@run folderObjects
-            }
     Column(
         modifier = Modifier
             .blur(if (moveObjectsEnabled.value) 4.dp else 0.dp)
@@ -141,7 +132,7 @@ fun MainScreen(
                         it,
                         editModeEnabled,
                         remember { mutableStateOf(ObjectCellState.SelectionBlank) },
-                        selectedObjectNames,
+                        selectedObjects,
                         objectsWasSelected,
                     )
                 }
@@ -163,7 +154,13 @@ fun MainScreen(
                 .fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            FolderSearch(folderDao)
+            FolderSearch(
+                folderDao,
+                currentFolderName,
+                selectedObjects,
+                moveObjectsEnabled,
+                editModeEnabled,
+            )
         }
     }
 }

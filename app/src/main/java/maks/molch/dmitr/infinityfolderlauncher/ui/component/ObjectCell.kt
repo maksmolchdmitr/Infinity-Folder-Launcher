@@ -44,7 +44,7 @@ fun ObjectCell(
     launcherObject: LauncherObject,
     editModeEnabled: MutableState<Boolean>,
     state: MutableState<ObjectCellState> = remember { mutableStateOf(ObjectCellState.Default) },
-    selectedObjectNames: MutableState<MutableSet<String>>,
+    selectedObjects: MutableState<MutableSet<LauncherObject>>,
     objectsWasSelected: MutableState<Boolean>,
 ) {
     val packageManager: PackageManager = context.packageManager
@@ -59,16 +59,14 @@ fun ObjectCell(
                 onClick = {
                     if (editModeEnabled.value) {
                         state.value = if (state.value == ObjectCellState.SelectionBlank) {
-                            selectedObjectNames.value.add(launcherObject.name)
+                            selectedObjects.value.add(launcherObject)
                             objectsWasSelected.value = true
-                            println("Selected object names: $selectedObjectNames")
                             ObjectCellState.SelectionMarked
                         } else {
-                            selectedObjectNames.value.remove(launcherObject.name)
-                            if (selectedObjectNames.value.isEmpty()) {
+                            selectedObjects.value.remove(launcherObject)
+                            if (selectedObjects.value.isEmpty()) {
                                 objectsWasSelected.value = false
                             }
-                            println("Selected object names: $selectedObjectNames")
                             ObjectCellState.SelectionBlank
                         }
                         return@combinedClickable

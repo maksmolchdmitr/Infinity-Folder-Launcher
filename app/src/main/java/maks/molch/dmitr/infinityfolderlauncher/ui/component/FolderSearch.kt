@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
 import maks.molch.dmitr.infinityfolderlauncher.data.Folder
+import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.ClickableIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Dropdown
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.DropdownItem
@@ -24,7 +25,13 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base20
 
 @Composable
-fun FolderSearch(folderDao: FolderDao) {
+fun FolderSearch(
+    folderDao: FolderDao,
+    currentFolderName: String,
+    selectedObjects: MutableState<MutableSet<LauncherObject>>,
+    moveObjectsEnabled: MutableState<Boolean>,
+    editModeEnabled: MutableState<Boolean>,
+) {
     val dropdownOn = remember { mutableStateOf(false) }
     val foldersQuery: MutableState<String> = remember { mutableStateOf("") }
     val queriedFolders: List<Folder> = folderDao.getFoldersByQuery(foldersQuery.value)
@@ -52,11 +59,38 @@ fun FolderSearch(folderDao: FolderDao) {
                         ?: R.drawable.infinity_folder_logo
                     DropdownItem(
                         icon = icon,
-                        onClick = {},
+                        onClick = {
+                            println("Click on folder '${folder.name}'")
+                            onFolderClick(
+                                folder.name,
+                                currentFolderName,
+                                folderDao,
+                                selectedObjects,
+                                dropdownOn,
+                                moveObjectsEnabled,
+                                editModeEnabled,
+                            )
+                        },
                         name = folder.name,
                     )
                 }
             )
         }
     }
+}
+
+private fun onFolderClick(
+    folderName: String,
+    currentFolderName: String,
+    folderDao: FolderDao,
+    selectedObjects: MutableState<MutableSet<LauncherObject>>,
+    dropdownOn: MutableState<Boolean>,
+    moveObjectsEnabled: MutableState<Boolean>,
+    editModeEnabled: MutableState<Boolean>,
+) {
+    folderDao.addObjectsAndSave(folderName, selectedObjects.value)
+    folderDao.removeObjectsAndSave(currentFolderName, selectedObjects.value)
+    dropdownOn.value = false
+    moveObjectsEnabled.value = false
+    editModeEnabled.value = false
 }
