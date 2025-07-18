@@ -1,7 +1,8 @@
 package maks.molch.dmitr.infinityfolderlauncher.ui.component.common
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
@@ -20,13 +21,15 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.Image
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base40
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.DefaultFontFamily
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Input(
     clickableIcon: ClickableIcon? = null,
 ) {
     val input = remember { mutableStateOf("") }
     TextField(
-        modifier = Modifier.height(64.dp)
+        modifier = Modifier
+            .height(64.dp)
             .background(Color.Unspecified),
         textStyle = TextStyle(
             fontFamily = DefaultFontFamily,
@@ -48,7 +51,10 @@ fun Input(
                 Image(
                     modifier = Modifier
                         .size(24.dp)
-                        .clickable { it.onClickTextConsumer(input.value) },
+                        .combinedClickable(
+                            onClick = { it.onClickTextConsumer(input.value) },
+                            onLongClick = { it.onLongClickConsumer(input.value) }
+                        ),
                     imageVector = it.icon
                 )
             }
@@ -59,4 +65,5 @@ fun Input(
 data class ClickableIcon(
     val icon: ImageVector,
     val onClickTextConsumer: (String) -> Unit,
+    val onLongClickConsumer: (String) -> Unit,
 )

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -25,7 +26,8 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base20
 @Composable
 fun FolderSearch(folderDao: FolderDao) {
     val dropdownOn = remember { mutableStateOf(false) }
-    val allFolders: List<Folder> = folderDao.getAllFolders()
+    val foldersQuery: MutableState<String> = remember { mutableStateOf("") }
+    val queriedFolders: List<Folder> = folderDao.getFoldersByQuery(foldersQuery.value)
     Column(
         modifier = Modifier
             .background(shape = RoundedCornerShape(12.dp), color = Base0)
@@ -37,13 +39,15 @@ fun FolderSearch(folderDao: FolderDao) {
                 icon = Icons.FolderSearch,
                 onClickTextConsumer = { searchText ->
                     println("Search text: $searchText")
-                    dropdownOn.value = !dropdownOn.value
-                }
+                    foldersQuery.value = searchText
+                    dropdownOn.value = true
+                },
+                onLongClickConsumer = { dropdownOn.value = false }
             )
         )
         if (dropdownOn.value) {
             Dropdown(
-                allFolders.map { folder ->
+                queriedFolders.map { folder ->
                     val icon = folder.iconName?.let { Icons.folderIconByName(it) }
                         ?: R.drawable.infinity_folder_logo
                     DropdownItem(
