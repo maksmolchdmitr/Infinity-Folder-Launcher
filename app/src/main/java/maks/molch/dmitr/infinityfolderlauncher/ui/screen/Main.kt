@@ -31,7 +31,6 @@ import maks.molch.dmitr.infinityfolderlauncher.dao.ApplicationDao
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.ObjectCell
-import maks.molch.dmitr.infinityfolderlauncher.ui.component.ObjectCellState
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.SelectFolder
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.ConfirmRemove
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.NavBar
@@ -131,7 +130,6 @@ fun MainScreen(
                         context,
                         it,
                         editModeEnabled,
-                        remember { mutableStateOf(ObjectCellState.SelectionBlank) },
                         selectedObjects,
                     )
                 }
@@ -180,11 +178,13 @@ fun MainScreen(
                 descriptionText = "Do you really want to clear all these objects?",
                 removeText = "Clear",
                 onCancelClick = {
+                    selectedObjects.value = setOf()
                     clearObjectsEnabled.value = false
                     editModeEnabled.value = false
                 },
                 onRemoveClick = {
                     folderDao.removeObjectsAndSave(currentFolderName, selectedObjects.value)
+                    selectedObjects.value = setOf()
                     clearObjectsEnabled.value = false
                     editModeEnabled.value = false
                 },

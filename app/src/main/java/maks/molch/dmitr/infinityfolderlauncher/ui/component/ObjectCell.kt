@@ -43,7 +43,6 @@ fun ObjectCell(
     context: Context,
     launcherObject: LauncherObject,
     editModeEnabled: MutableState<Boolean>,
-    state: MutableState<ObjectCellState> = remember { mutableStateOf(ObjectCellState.Default) },
     selectedObjects: MutableState<Set<LauncherObject>>,
 ) {
     val packageManager: PackageManager = context.packageManager
@@ -58,14 +57,13 @@ fun ObjectCell(
                 onClick = {
                     if (editModeEnabled.value) {
                         println("Selected objects: $selectedObjects")
-                        state.value = if (state.value == ObjectCellState.SelectionBlank) {
+                        val state: ObjectCellState = calcState(selectedObjects, launcherObject)
+                        if (state == ObjectCellState.SelectionBlank) {
                             selectedObjects.value += launcherObject
-                            ObjectCellState.SelectionMarked
                         } else {
                             selectedObjects.value = selectedObjects.value
                                 .filter { it.name != launcherObject.name }
                                 .toSet()
-                            ObjectCellState.SelectionBlank
                         }
                         return@combinedClickable
                     }
@@ -128,8 +126,18 @@ fun ObjectCell(
     }
 
     if (editModeEnabled.value) {
+        val state: ObjectCellState = calcState(selectedObjects, launcherObject)
         ObjectCellIcons(boxSize, state)
     }
+}
+
+private fun calcState(
+    selectedObjects: MutableState<Set<LauncherObject>>,
+    launcherObject: LauncherObject
+) = if (selectedObjects.value.any { it.name == launcherObject.name }) {
+    ObjectCellState.SelectionMarked
+} else {
+    ObjectCellState.SelectionBlank
 }
 
 enum class ObjectCellState {
@@ -141,7 +149,7 @@ enum class ObjectCellState {
 
 @SuppressLint("UseOfNonLambdaOffsetOverload")
 @Composable
-fun ObjectCellIcons(boxSize: MutableState<IntSize>, state: MutableState<ObjectCellState>) {
+fun ObjectCellIcons(boxSize: MutableState<IntSize>, state: ObjectCellState) {
     val rightUp = Modifier
         .absoluteOffset(
             (35 * boxSize.value.width / 186).dp,
@@ -167,7 +175,7 @@ fun ObjectCellIcons(boxSize: MutableState<IntSize>, state: MutableState<ObjectCe
         )
         .size((24 * boxSize.value.width / 186).dp)
 
-    when (state.value) {
+    when (state) {
         ObjectCellState.SelectionBlank -> {
             Image(
                 modifier = leftDown,
