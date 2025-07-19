@@ -20,6 +20,7 @@ val Red50 = Color(0xFFF93F30)
 val Red70 = Color(0xFFC2000D)
 
 val Base0 = Color(0xFFFFFFFF)
+val Base5 = Color(0xFFF3F3F3)
 val Base10 = Color(0xFFDDDDDD)
 val Base20 = Color(0xFFC6C6C6)
 val Base40 = Color(0xFF9B9B9B)

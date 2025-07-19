@@ -10,6 +10,7 @@ import maks.molch.dmitr.infinityfolderlauncher.dao.ApplicationDao
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
 import maks.molch.dmitr.infinityfolderlauncher.dao.OnboardingDao
 import maks.molch.dmitr.infinityfolderlauncher.dao.getFolderName
+import maks.molch.dmitr.infinityfolderlauncher.ui.screen.AddApplication
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.MainScreen
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.OnboardingScreen
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.SplashScreen
@@ -30,9 +31,10 @@ class MainActivity : ComponentActivity() {
                 mutableStateOf(Screen.Splash)
             }
             when (screen.value) {
-                Screen.Main -> MainScreen(this, folderName, folderDao, applicationDao)
+                Screen.Main -> MainScreen(this, screen, folderName, folderDao, applicationDao)
                 Screen.Splash -> SplashScreen(screen, onboardingDao)
                 Screen.Onboarding -> OnboardingScreen(screen, onboardingDao)
+                Screen.AddApplication -> AddApplication()
             }
         }
     }
@@ -42,4 +44,5 @@ enum class Screen {
     Main,
     Splash,
     Onboarding,
+    AddApplication,
 }

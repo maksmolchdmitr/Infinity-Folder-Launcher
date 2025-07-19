@@ -27,6 +27,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import maks.molch.dmitr.infinityfolderlauncher.R
+import maks.molch.dmitr.infinityfolderlauncher.Screen
 import maks.molch.dmitr.infinityfolderlauncher.dao.ApplicationDao
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
@@ -48,6 +49,7 @@ import maks.molch.dmitr.infinityfolderlauncher.utils.toastMakeTextAndShow
 @Composable
 fun MainScreen(
     context: Context,
+    screen: MutableState<Screen>,
     currentFolderName: String,
     folderDao: FolderDao,
     applicationDao: ApplicationDao
@@ -137,7 +139,13 @@ fun MainScreen(
         }
         if (editModeEnabled.value && !moveObjectsEnabled.value) {
             NavBar(Page.Home) { page ->
-                { context.toastMakeTextAndShow("${page.name} nav bar") }
+                {
+                    context.toastMakeTextAndShow("${page.name} nav bar")
+                    when (page) {
+                        Page.AddApplication -> screen.value = Screen.AddApplication
+                        else -> Unit
+                    }
+                }
             }
         }
     }

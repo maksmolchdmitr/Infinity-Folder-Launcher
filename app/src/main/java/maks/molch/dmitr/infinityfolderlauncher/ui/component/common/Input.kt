@@ -2,9 +2,11 @@ package maks.molch.dmitr.infinityfolderlauncher.ui.component.common
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.TextField
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,7 +24,8 @@ fun Input(
     leadingClickableIcon: ClickableIcon? = null,
     trailingClickableIcon: ClickableIcon? = null,
     textColor: Color = Base40,
-    inputText: String? = null
+    inputText: String? = null,
+    shape: RoundedCornerShape = RoundedCornerShape(12.dp)
 ) {
     val input = remember { mutableStateOf("") }
     val leadingIcon: @Composable (() -> Unit)? = leadingClickableIcon?.let {
@@ -55,8 +58,10 @@ fun Input(
             }
         }
     }
-    TextField(
+    OutlinedTextField(
+        shape = shape,
         modifier = Modifier
+            .fillMaxWidth()
             .height(64.dp),
         textStyle = DefaultFontStyle,
         value = inputText ?: input.value,

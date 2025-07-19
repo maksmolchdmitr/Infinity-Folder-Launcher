@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -37,7 +36,6 @@ fun FolderSearch(
     Column(
         modifier = Modifier
             .background(shape = RoundedCornerShape(12.dp), color = Base0)
-            .padding(12.dp)
             .fillMaxWidth()
             .border(1.dp, color = Base20, shape = RoundedCornerShape(12.dp)),
     ) {
@@ -55,7 +53,13 @@ fun FolderSearch(
                 onLongClickConsumer = { selectedFolder.value = null }
             ),
             textColor = if (selectedFolder.value == null) Base40 else Green50,
-            inputText = selectedFolder.value?.name
+            inputText = selectedFolder.value?.name,
+            shape = RoundedCornerShape(
+                topStart = 12.dp,
+                topEnd = 12.dp,
+                bottomStart = if (dropdownOn.value) 0.dp else 12.dp,
+                bottomEnd = if (dropdownOn.value) 0.dp else 12.dp,
+            ),
         )
         if (dropdownOn.value) {
             Dropdown(

@@ -24,12 +24,28 @@ import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.Image
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.ImageSource
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
-import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base20
+import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base5
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.DefaultFontFamily
 
 @Composable
 fun Dropdown(dropdownItems: List<DropdownItem>) {
-    if (dropdownItems.isEmpty()) {
+    if (dropdownItems.isNotEmpty()) {
+        LazyColumn(
+            modifier = Modifier
+                .background(
+                    color = Base5,
+                    shape = RoundedCornerShape(
+                        topStart = 0.dp,
+                        topEnd = 0.dp,
+                        bottomStart = 12.dp,
+                        bottomEnd = 12.dp,
+                    )
+                )
+                .padding(vertical = 12.dp),
+        ) {
+            items(dropdownItems) { DropdownRow(dropdownItem = it) }
+        }
+    } else {
         Text(
             modifier = Modifier
                 .background(Color.Unspecified, shape = RoundedCornerShape(12.dp))
@@ -41,16 +57,6 @@ fun Dropdown(dropdownItems: List<DropdownItem>) {
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
-
-        return
-    }
-
-    LazyColumn(
-        modifier = Modifier
-            .background(color = Base20)
-            .padding(vertical = 12.dp),
-    ) {
-        items(dropdownItems) { DropdownRow(dropdownItem = it) }
     }
 }
 
