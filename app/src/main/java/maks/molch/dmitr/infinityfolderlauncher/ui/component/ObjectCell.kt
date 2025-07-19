@@ -2,7 +2,6 @@ package maks.molch.dmitr.infinityfolderlauncher.ui.component
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -26,9 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import maks.molch.dmitr.infinityfolderlauncher.MainActivity
 import maks.molch.dmitr.infinityfolderlauncher.R
-import maks.molch.dmitr.infinityfolderlauncher.dao.putFolderName
 import maks.molch.dmitr.infinityfolderlauncher.data.Application
 import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
@@ -44,6 +41,7 @@ fun ObjectCell(
     launcherObject: LauncherObject,
     editModeEnabled: MutableState<Boolean>,
     selectedObjects: MutableState<Set<LauncherObject>>,
+    onClick: () -> Unit = {},
 ) {
     val packageManager: PackageManager = context.packageManager
     val boxSize: MutableState<IntSize> = remember { mutableStateOf(IntSize(1, 1)) }
@@ -54,37 +52,7 @@ fun ObjectCell(
                 boxSize.value = layoutCoordinates.size
             }
             .combinedClickable(
-                onClick = {
-                    if (editModeEnabled.value) {
-                        println("Selected objects: $selectedObjects")
-                        val state: ObjectCellState = calcState(selectedObjects, launcherObject)
-                        if (state == ObjectCellState.SelectionBlank) {
-                            selectedObjects.value += launcherObject
-                        } else {
-                            selectedObjects.value = selectedObjects.value
-                                .filter { it.name != launcherObject.name }
-                                .toSet()
-                        }
-                        return@combinedClickable
-                    }
-
-                    when (launcherObject) {
-                        is Application -> {
-                            packageManager.getLaunchIntentForPackage(launcherObject.packageName)
-                                ?.let { intent ->
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    context.startActivity(intent)
-                                }
-                        }
-
-                        is Folder -> {
-                            val intent = Intent(context, MainActivity::class.java)
-                            intent.putFolderName(launcherObject.name)
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            context.startActivity(intent)
-                        }
-                    }
-                },
+                onClick = onClick,
             )
             .fillMaxWidth(),
         contentAlignment = Alignment.Center,
@@ -131,7 +99,7 @@ fun ObjectCell(
     }
 }
 
-private fun calcState(
+fun calcState(
     selectedObjects: MutableState<Set<LauncherObject>>,
     launcherObject: LauncherObject
 ) = if (selectedObjects.value.any { it.name == launcherObject.name }) {

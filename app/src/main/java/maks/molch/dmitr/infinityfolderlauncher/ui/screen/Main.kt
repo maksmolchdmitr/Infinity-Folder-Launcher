@@ -1,6 +1,8 @@
 package maks.molch.dmitr.infinityfolderlauncher.ui.screen
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -26,13 +28,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import maks.molch.dmitr.infinityfolderlauncher.MainActivity
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.Screen
-import maks.molch.dmitr.infinityfolderlauncher.dao.ApplicationDao
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
+import maks.molch.dmitr.infinityfolderlauncher.dao.putFolderName
+import maks.molch.dmitr.infinityfolderlauncher.data.Application
+import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.ObjectCell
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.ObjectCellState
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.SelectFolder
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.calcState
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.ConfirmRemove
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.NavBar
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Page
@@ -51,10 +58,10 @@ fun MainScreen(
     context: Context,
     screen: MutableState<Screen>,
     currentFolderName: String,
-    folderDao: FolderDao,
-    applicationDao: ApplicationDao
+    folderDao: FolderDao
 ) {
     val objectNumberOnTheRow = 4
+
     val editModeEnabled = remember {
         mutableStateOf(false)
     }
@@ -127,26 +134,50 @@ fun MainScreen(
                 verticalArrangement = Arrangement.spacedBy(32.dp),
                 horizontalArrangement = Arrangement.spacedBy(32.dp),
             ) {
-                items(launcherObjects) {
+                items(launcherObjects) { launcherObject ->
                     ObjectCell(
                         context,
-                        it,
+                        launcherObject,
                         editModeEnabled,
                         selectedObjects,
-                    )
+                    ) {
+                        if (editModeEnabled.value) {
+                            println("Selected objects: $selectedObjects")
+                            val state: ObjectCellState = calcState(selectedObjects, launcherObject)
+                            if (state == ObjectCellState.SelectionBlank) {
+                                selectedObjects.value += launcherObject
+                            } else {
+                                selectedObjects.value = selectedObjects.value
+                                    .filter { it.name != launcherObject.name }
+                                    .toSet()
+                            }
+
+                            return@ObjectCell
+                        }
+
+                        when (launcherObject) {
+                            is Application -> {
+                                val packageManager: PackageManager = context.packageManager
+                                packageManager.getLaunchIntentForPackage(launcherObject.packageName)
+                                    ?.let { intent ->
+                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        context.startActivity(intent)
+                                    }
+                            }
+
+                            is Folder -> {
+                                val intent = Intent(context, MainActivity::class.java)
+                                intent.putFolderName(launcherObject.name)
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(intent)
+                            }
+                        }
+                    }
                 }
             }
         }
         if (editModeEnabled.value && !moveObjectsEnabled.value) {
-            NavBar(Page.Home) { page ->
-                {
-                    context.toastMakeTextAndShow("${page.name} nav bar")
-                    when (page) {
-                        Page.AddApplication -> screen.value = Screen.AddApplication
-                        else -> Unit
-                    }
-                }
-            }
+            NavBar(Page.Home, context, screen)
         }
     }
     if (moveObjectsEnabled.value) {

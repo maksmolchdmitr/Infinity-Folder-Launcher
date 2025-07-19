@@ -31,10 +31,16 @@ class MainActivity : ComponentActivity() {
                 mutableStateOf(Screen.Splash)
             }
             when (screen.value) {
-                Screen.Main -> MainScreen(this, screen, folderName, folderDao, applicationDao)
+                Screen.Main -> MainScreen(this, screen, folderName, folderDao)
                 Screen.Splash -> SplashScreen(screen, onboardingDao)
                 Screen.Onboarding -> OnboardingScreen(screen, onboardingDao)
-                Screen.AddApplication -> AddApplication()
+                Screen.AddApplication -> AddApplication(
+                    this,
+                    screen,
+                    applicationDao,
+                    folderName,
+                    folderDao,
+                )
             }
         }
     }
