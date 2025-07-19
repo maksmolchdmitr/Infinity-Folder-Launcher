@@ -4,21 +4,17 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.Image
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.ImageSource
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base40
-import maks.molch.dmitr.infinityfolderlauncher.ui.theme.DefaultFontFamily
+import maks.molch.dmitr.infinityfolderlauncher.ui.theme.DefaultFontStyle
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -62,19 +58,13 @@ fun Input(
     TextField(
         modifier = Modifier
             .height(64.dp),
-        textStyle = TextStyle(
-            fontFamily = DefaultFontFamily,
-            fontSize = 14.sp
-        ),
+        textStyle = DefaultFontStyle,
         value = inputText ?: input.value,
         onValueChange = { value -> input.value = value },
         label = {
-            Text(
+            TextBodyS(
                 text = "Folder name",
                 color = textColor,
-                fontFamily = DefaultFontFamily,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Normal,
             )
         },
         leadingIcon = leadingIcon,

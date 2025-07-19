@@ -16,9 +16,8 @@ val Grey50 = Color(0xFF868686)
 
 val Orange10 = Color(0xFFEEDBB3)
 
+val Red50 = Color(0xFFF93F30)
 val Red70 = Color(0xFFC2000D)
-
-val Black100 = Color(0xFF000000)
 
 val Base0 = Color(0xFFFFFFFF)
 val Base10 = Color(0xFFDDDDDD)
@@ -28,6 +27,7 @@ val Base50 = Color(0xFF868686)
 val Base60 = Color(0xFF727272)
 val Base70 = Color(0xFF5E5E5E)
 val Base90 = Color(0xFF393939)
+val Base100 = Color(0xFF000000)
 
 val Base0_10Percent = Color(0xFF, 0xFF, 0xFF, 0xFF / 10)
 val Base0_50Percent = Color(0xFF, 0xFF, 0xFF, 0xFF / 2)

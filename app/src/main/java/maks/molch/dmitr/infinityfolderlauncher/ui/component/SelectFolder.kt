@@ -22,9 +22,9 @@ import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
 import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
+import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base100
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base20
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base50
-import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Black100
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.DefaultFontFamily
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Green50
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Orange10
@@ -33,7 +33,7 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Orange10
 fun SelectFolder(
     folderDao: FolderDao,
     currentFolderName: String,
-    selectedObjects: MutableState<MutableSet<LauncherObject>>,
+    selectedObjects: MutableState<Set<LauncherObject>>,
     moveObjectsEnabled: MutableState<Boolean>,
     editModeEnabled: MutableState<Boolean>
 ) {
@@ -52,7 +52,7 @@ fun SelectFolder(
             fontFamily = DefaultFontFamily,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
-            color = Black100,
+            color = Base100,
         )
         FolderSearch(folderDao, selectedFolder)
         Row(
@@ -111,7 +111,7 @@ private fun onMoveClick(
     folderName: String,
     currentFolderName: String,
     folderDao: FolderDao,
-    selectedObjects: MutableState<MutableSet<LauncherObject>>,
+    selectedObjects: MutableState<Set<LauncherObject>>,
     moveObjectsEnabled: MutableState<Boolean>,
     editModeEnabled: MutableState<Boolean>,
 ) {

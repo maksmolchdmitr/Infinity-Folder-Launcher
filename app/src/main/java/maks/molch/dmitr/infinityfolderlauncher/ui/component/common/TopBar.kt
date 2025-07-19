@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -59,17 +57,9 @@ fun TopBar(
 fun TopBarIconComposable(icon: TopBarIcon) {
     Icon(
         modifier = Modifier
-            .alpha(
-                if (icon.enabled.value) {
-                    println("Enabled: ${icon.enabled.value}")
-                    1f
-                } else {
-                    println("Enabled: ${icon.enabled.value}")
-                    0.3f
-                }
-            )
+            .alpha(if (icon.enabled) 1f else 0.3f)
             .size(28.dp)
-            .clickable { if (icon.enabled.value) icon.onClick() },
+            .clickable { if (icon.enabled) icon.onClick() },
         imageVector = icon.icon,
         contentDescription = null,
         tint = icon.color,
@@ -79,6 +69,6 @@ fun TopBarIconComposable(icon: TopBarIcon) {
 data class TopBarIcon(
     val icon: ImageVector,
     val color: Color = Base70,
-    val enabled: MutableState<Boolean> = mutableStateOf(true),
+    val enabled: Boolean = true,
     val onClick: () -> Unit,
 )

@@ -37,6 +37,7 @@ import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.Screen
 import maks.molch.dmitr.infinityfolderlauncher.dao.OnboardingDao
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Stepper
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TextH4
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.ArrowIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
@@ -122,13 +123,9 @@ fun DescriptorTextBlock(step: MutableIntState) {
         modifier = Modifier.height(125.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
+        TextH4(
             text = stepToTextPair[step.intValue]?.first ?: "",
-            fontFamily = DefaultFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 28.sp,
             color = Base90,
-            textAlign = TextAlign.Center,
         )
         Text(
             text = stepToTextPair[step.intValue]?.second ?: "",

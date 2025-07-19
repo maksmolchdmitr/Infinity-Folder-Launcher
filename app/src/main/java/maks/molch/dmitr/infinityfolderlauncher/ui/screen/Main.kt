@@ -1,6 +1,5 @@
 package maks.molch.dmitr.infinityfolderlauncher.ui.screen
 
-import android.annotation.SuppressLint
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -34,6 +33,7 @@ import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.ObjectCell
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.ObjectCellState
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.SelectFolder
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.ConfirmRemove
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.NavBar
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Page
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TopBar
@@ -45,7 +45,6 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Settings
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Red70
 import maks.molch.dmitr.infinityfolderlauncher.utils.toastMakeTextAndShow
 
-@SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen(
@@ -58,14 +57,16 @@ fun MainScreen(
     val editModeEnabled = remember {
         mutableStateOf(false)
     }
-    val objectsWasSelected: MutableState<Boolean> = remember {
-        mutableStateOf(false)
-    }
     val moveObjectsEnabled = remember {
         mutableStateOf(false)
     }
-    val selectedObjects: MutableState<MutableSet<LauncherObject>> = remember {
-        mutableStateOf(hashSetOf())
+    val clearObjectsEnabled = remember {
+        mutableStateOf(false)
+    }
+    val selectedObjects: MutableState<Set<LauncherObject>> = remember {
+        mutableStateOf(
+            setOf()
+        )
     }
 
     val launcherObjects: List<LauncherObject> =
@@ -91,17 +92,16 @@ fun MainScreen(
                 },
                 firstRightIcon = TopBarIcon(
                     icon = Icons.Move,
-                    enabled = objectsWasSelected,
+                    enabled = selectedObjects.value.isNotEmpty(),
                 ) {
-                    context.toastMakeTextAndShow("Move top bar")
                     moveObjectsEnabled.value = true
                 },
                 secondRightIcon = TopBarIcon(
                     Icons.Cancel,
-                    enabled = objectsWasSelected,
+                    enabled = selectedObjects.value.isNotEmpty(),
                     color = Red70,
                 ) {
-                    context.toastMakeTextAndShow("Cancel top bar")
+                    clearObjectsEnabled.value = true
                 },
             )
         }
@@ -133,7 +133,6 @@ fun MainScreen(
                         editModeEnabled,
                         remember { mutableStateOf(ObjectCellState.SelectionBlank) },
                         selectedObjects,
-                        objectsWasSelected,
                     )
                 }
             }
@@ -160,6 +159,35 @@ fun MainScreen(
                 selectedObjects,
                 moveObjectsEnabled,
                 editModeEnabled,
+            )
+        }
+    }
+    if (clearObjectsEnabled.value) {
+        Box(
+            modifier = Modifier
+                .padding(16.dp)
+                .background(Color.Unspecified)
+                .clickable {
+                    moveObjectsEnabled.value = false
+                }
+                .fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            ConfirmRemove(
+                mainText = "Clear ${selectedObjects.value.size} selected object${
+                    if (selectedObjects.value.size == 1) "" else "s"
+                }",
+                descriptionText = "Do you really want to clear all these objects?",
+                removeText = "Clear",
+                onCancelClick = {
+                    clearObjectsEnabled.value = false
+                    editModeEnabled.value = false
+                },
+                onRemoveClick = {
+                    folderDao.removeObjectsAndSave(currentFolderName, selectedObjects.value)
+                    clearObjectsEnabled.value = false
+                    editModeEnabled.value = false
+                },
             )
         }
     }
