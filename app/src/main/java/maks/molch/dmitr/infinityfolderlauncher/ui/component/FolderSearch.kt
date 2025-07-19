@@ -18,6 +18,7 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.ClickableIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Dropdown
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.DropdownItem
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Input
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TextBodyS
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.FolderSearch
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
@@ -52,7 +53,14 @@ fun FolderSearch(
                 },
                 onLongClickConsumer = { selectedFolder.value = null }
             ),
-            textColor = if (selectedFolder.value == null) Base40 else Green50,
+            label = {
+                {
+                    TextBodyS(
+                        text = "Folder name",
+                        color = if (selectedFolder.value == null) Base40 else Green50,
+                    )
+                }
+            },
             inputText = selectedFolder.value?.name,
             shape = RoundedCornerShape(
                 topStart = 12.dp,

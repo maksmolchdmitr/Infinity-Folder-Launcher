@@ -11,11 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.Image
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.ImageSource
-import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base40
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.DefaultFontStyle
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -23,9 +21,9 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.theme.DefaultFontStyle
 fun Input(
     leadingClickableIcon: ClickableIcon? = null,
     trailingClickableIcon: ClickableIcon? = null,
-    textColor: Color = Base40,
+    label: (String) -> @Composable () -> Unit = { { } },
     inputText: String? = null,
-    shape: RoundedCornerShape = RoundedCornerShape(12.dp)
+    shape: RoundedCornerShape = RoundedCornerShape(12.dp),
 ) {
     val input = remember { mutableStateOf("") }
     val leadingIcon: @Composable (() -> Unit)? = leadingClickableIcon?.let {
@@ -66,12 +64,7 @@ fun Input(
         textStyle = DefaultFontStyle,
         value = inputText ?: input.value,
         onValueChange = { value -> input.value = value },
-        label = {
-            TextBodyS(
-                text = "Folder name",
-                color = textColor,
-            )
-        },
+        label = label.invoke(input.value),
         leadingIcon = leadingIcon,
         trailingIcon = trailingIcon,
     )
