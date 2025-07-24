@@ -51,8 +51,8 @@ fun NavBar(currentState: Page, context: Context, screen: MutableState<Screen>) {
                 screen.value = when (page) {
                     Page.Home -> Screen.Main
                     Page.AddApplication -> Screen.AddApplication
-                    Page.Folder -> TODO()
-                    Page.Widget -> TODO()
+                    Page.Folder -> Screen.AddFolder
+                    Page.Widget -> Screen.AddWidget
                 }
             }
         }

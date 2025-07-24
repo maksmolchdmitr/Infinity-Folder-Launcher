@@ -10,3 +10,5 @@ fun Context.toastMakeTextAndShow(text: String) {
         Toast.LENGTH_SHORT
     ).show()
 }
+
+const val MAIN_FOLDER_NAME = "MAIN_FOLDER"

@@ -51,3 +51,6 @@ sealed class ImageSource {
         }
     }
 }
+
+fun ImageVector.toImageSource(): ImageSource = ImageSource.Vector(this)
+fun @receiver:DrawableRes Int.toImageSource(): ImageSource = ImageSource.Resource(this)

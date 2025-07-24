@@ -1,4 +1,4 @@
-package maks.molch.dmitr.infinityfolderlauncher.converter
+package maks.molch.dmitr.infinityfolderlauncher.dao.converter
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -59,6 +59,7 @@ class FolderTypeAdapter : JsonSerializer<Folder>, JsonDeserializer<Folder> {
     ): JsonElement {
         val jsonObject = JsonObject().apply {
             addProperty("name", folder.name)
+            folder.iconName?.let { addProperty("iconName", it) }
             addProperty("type", Folder::class.java.canonicalName)
         }
 
@@ -86,13 +87,14 @@ class FolderTypeAdapter : JsonSerializer<Folder>, JsonDeserializer<Folder> {
     ): Folder {
         if (json !is JsonObject) throw JsonParseException("Unsupported type")
         val name = json.getAsJsonPrimitive("name").asString
+        val iconName = json.getAsJsonPrimitive("iconName")?.asString
 
         val jsonArray = json.getAsJsonArray("launcherObjects")
         val launcherObjects = ArrayList<LauncherObject>(jsonArray.size())
         for (jsonObj in jsonArray) {
             launcherObjects.add(context.deserialize(jsonObj, LauncherObject::class.java))
         }
-        return Folder(name, launcherObjects)
+        return Folder(name, launcherObjects, iconName)
     }
 }
 

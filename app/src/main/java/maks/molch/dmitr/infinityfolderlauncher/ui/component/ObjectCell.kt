@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -31,6 +30,7 @@ import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.DrawableImage
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.Image
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.ImageSource
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
 
 
@@ -68,19 +68,15 @@ fun ObjectCell(
                 }
 
                 is Folder -> {
-                    launcherObject.iconName?.let(Icons::folderIconByName)?.let { icon ->
-                        Icon(
-                            modifier = Modifier.size(70.dp),
-                            imageVector = icon,
-                            contentDescription = null,
-                        )
-                    } ?: run {
-                        Image(
-                            modifier = Modifier
-                                .size(70.dp),
-                            resourceId = R.drawable.infinity_folder_logo,
-                        )
-                    }
+                    val imageSource: ImageSource = ImageSource.from(
+                        launcherObject.iconName?.let(Icons::folderIconByName)
+                            ?: R.drawable.infinity_folder_logo
+                    )!!
+
+                    Image(
+                        modifier = Modifier.size(70.dp),
+                        imageSource = imageSource,
+                    )
                 }
             }
             Text(

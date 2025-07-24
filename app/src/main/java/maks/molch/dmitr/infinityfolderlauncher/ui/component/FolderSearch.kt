@@ -33,7 +33,7 @@ fun FolderSearch(
 ) {
     val dropdownOn: MutableState<Boolean> = remember { mutableStateOf(false) }
     val foldersQuery: MutableState<String> = remember { mutableStateOf("") }
-    val queriedFolders: List<Folder> = folderDao.getFoldersByQuery(foldersQuery.value)
+    val queriedFolders: List<Folder> = folderDao.getAllByQuery(foldersQuery.value)
     Column(
         modifier = Modifier
             .background(shape = RoundedCornerShape(12.dp), color = Base0)
@@ -61,7 +61,7 @@ fun FolderSearch(
                     )
                 }
             },
-            inputText = selectedFolder.value?.name,
+            inputText = selectedFolder.value?.name?.let { mutableStateOf(it) },
             shape = RoundedCornerShape(
                 topStart = 12.dp,
                 topEnd = 12.dp,

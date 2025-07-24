@@ -78,7 +78,9 @@ fun MainScreen(
     }
 
     val launcherObjects: List<LauncherObject> =
-        folderDao.getFolderOrSaveByName(currentFolderName).launcherObjects
+        folderDao.getOrSaveByName(currentFolderName).launcherObjects
+
+    println("All objects: $launcherObjects")
 
     BackHandler(enabled = editModeEnabled.value && moveObjectsEnabled.value) {
         moveObjectsEnabled.value = false
