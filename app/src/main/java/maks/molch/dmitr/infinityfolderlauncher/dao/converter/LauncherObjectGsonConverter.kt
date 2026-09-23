@@ -14,6 +14,7 @@ import maks.molch.dmitr.infinityfolderlauncher.data.Application
 import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
 import java.lang.reflect.Type
+import java.util.UUID
 
 val converter: Gson = GsonBuilder()
     .registerTypeAdapter(LauncherObject::class.java, LauncherObjectTypeAdapter())
@@ -25,26 +26,24 @@ class LauncherObjectTypeAdapter : JsonSerializer<LauncherObject>, JsonDeserializ
     override fun serialize(
         launcherObject: LauncherObject,
         typeOfSrc: Type,
-        context: JsonSerializationContext
-    ): JsonElement {
-        return when (launcherObject) {
-            is Application -> context.serialize(launcherObject, Application::class.java)
-            is Folder -> context.serialize(launcherObject, Folder::class.java)
-        }
+        context: JsonSerializationContext,
+    ): JsonElement = when (launcherObject) {
+        is Application -> context.serialize(launcherObject, Application::class.java)
+        is Folder -> context.serialize(launcherObject, Folder::class.java)
     }
 
     override fun deserialize(
         json: JsonElement,
         typeOfT: Type,
-        context: JsonDeserializationContext
+        context: JsonDeserializationContext,
     ): LauncherObject {
         if (json !is JsonObject) throw JsonParseException("Unsupported type")
         return when (json.getAsJsonPrimitive("type").asString) {
             Application::class.java.canonicalName ->
-                context.deserialize<Application>(json, Application::class.java)
+                context.deserialize(json, Application::class.java)
 
             Folder::class.java.canonicalName ->
-                context.deserialize<Folder>(json, Folder::class.java)
+                context.deserialize(json, Folder::class.java)
 
             else -> throw JsonParseException("Unsupported type")
         }
@@ -55,25 +54,23 @@ class FolderTypeAdapter : JsonSerializer<Folder>, JsonDeserializer<Folder> {
     override fun serialize(
         folder: Folder,
         typeOfSrc: Type,
-        context: JsonSerializationContext
+        context: JsonSerializationContext,
     ): JsonElement {
         val jsonObject = JsonObject().apply {
+            addProperty("id", folder.id)
             addProperty("name", folder.name)
             folder.iconName?.let { addProperty("iconName", it) }
             addProperty("type", Folder::class.java.canonicalName)
         }
 
-        val launcherObjects = folder.launcherObjects
-        val jsonArray = JsonArray(launcherObjects.size).apply {
-            for (launcherObject in launcherObjects) {
-                val serializedObject = if (launcherObject is Folder) {
-                    // Create a shallow copy of the folder without its children
-                    // to avoid overly deep recursion or circular dependencies.
-                    context.serialize(launcherObject.copy(launcherObjects = emptyList()))
+        val jsonArray = JsonArray(folder.launcherObjects.size).apply {
+            for (launcherObject in folder.launcherObjects) {
+                val serialized = if (launcherObject is Folder) {
+                    context.serialize(launcherObject.asReference())
                 } else {
                     context.serialize(launcherObject)
                 }
-                add(serializedObject)
+                add(serialized)
             }
         }
         jsonObject.add("launcherObjects", jsonArray)
@@ -83,18 +80,20 @@ class FolderTypeAdapter : JsonSerializer<Folder>, JsonDeserializer<Folder> {
     override fun deserialize(
         json: JsonElement,
         typeOfT: Type,
-        context: JsonDeserializationContext
+        context: JsonDeserializationContext,
     ): Folder {
         if (json !is JsonObject) throw JsonParseException("Unsupported type")
         val name = json.getAsJsonPrimitive("name").asString
-        val iconName = json.getAsJsonPrimitive("iconName")?.asString
+        val id = json.get("id")?.takeUnless { it.isJsonNull }?.asString
+            ?: UUID.randomUUID().toString()
+        val iconName = json.get("iconName")?.takeUnless { it.isJsonNull }?.asString
 
-        val jsonArray = json.getAsJsonArray("launcherObjects")
+        val jsonArray = json.getAsJsonArray("launcherObjects") ?: JsonArray()
         val launcherObjects = ArrayList<LauncherObject>(jsonArray.size())
         for (jsonObj in jsonArray) {
             launcherObjects.add(context.deserialize(jsonObj, LauncherObject::class.java))
         }
-        return Folder(name, launcherObjects, iconName)
+        return Folder(id = id, name = name, launcherObjects = launcherObjects, iconName = iconName)
     }
 }
 
@@ -102,23 +101,23 @@ class ApplicationTypeAdapter : JsonSerializer<Application>, JsonDeserializer<App
     override fun serialize(
         application: Application,
         typeOfSrc: Type,
-        context: JsonSerializationContext
-    ): JsonElement {
-        val jsonObject = JsonObject()
-        jsonObject.addProperty("name", application.name)
-        jsonObject.addProperty("type", Application::class.java.canonicalName)
-        jsonObject.addProperty("package_name", application.packageName)
-        return jsonObject
+        context: JsonSerializationContext,
+    ): JsonElement = JsonObject().apply {
+        addProperty("id", application.id)
+        addProperty("name", application.name)
+        addProperty("type", Application::class.java.canonicalName)
+        addProperty("package_name", application.packageName)
     }
 
     override fun deserialize(
         json: JsonElement,
         typeOfT: Type,
-        context: JsonDeserializationContext
+        context: JsonDeserializationContext,
     ): Application {
         if (json !is JsonObject) throw JsonParseException("Unsupported type")
         val name = json.getAsJsonPrimitive("name").asString
         val packageName = json.getAsJsonPrimitive("package_name").asString
-        return Application(name, packageName)
+        val id = json.get("id")?.takeUnless { it.isJsonNull }?.asString ?: packageName
+        return Application(id = id, name = name, packageName = packageName)
     }
 }

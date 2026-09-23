@@ -12,6 +12,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -49,27 +51,28 @@ fun AddApplication(
     context: Context,
     screen: MutableState<Screen>,
     applicationDao: ApplicationDao,
-    currentFolderName: String,
-    folderDao: FolderDao
+    currentFolderId: String,
+    folderDao: FolderDao,
 ) {
     val objectNumberOnTheRow = 4
+    val epoch by folderDao.epoch.collectAsState()
 
     val multipleChoiceEnabled: MutableState<Boolean> = remember { mutableStateOf(false) }
-    val selectedObjects: MutableState<Set<LauncherObject>> = remember {
-        mutableStateOf(
-            setOf()
-        )
-    }
+    val selectedObjects: MutableState<Set<LauncherObject>> = remember { mutableStateOf(setOf()) }
     val query: MutableState<String?> = remember { mutableStateOf(null) }
 
-    val allApplications: List<Application> = applicationDao.getInstalledApplications()
-        .filter { application ->
-            query.value?.let { application.name.lowercase().contains(it.lowercase()) } ?: true
-        }
+    val existingIds = remember(epoch, currentFolderId) {
+        folderDao.getOrCreate(currentFolderId).launcherObjects.map { it.id }.toSet()
+    }
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
+    val allApplications: List<Application> = remember(query.value) {
+        applicationDao.getInstalledApplications()
+            .filter { application ->
+                query.value?.let { application.name.lowercase().contains(it.lowercase()) } ?: true
+            }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
         TopBar(
             label = "Add App",
             secondRightIcon = TopBarIcon(
@@ -77,9 +80,9 @@ fun AddApplication(
                 color = Base70,
                 enabled = selectedObjects.value.isNotEmpty(),
             ) {
-                folderDao.addObjectsAndSave(currentFolderName, selectedObjects.value)
+                folderDao.addObjectsAndSave(currentFolderId, selectedObjects.value)
                 screen.value = Screen.Main
-            }
+            },
         )
         Column(
             modifier = Modifier
@@ -89,7 +92,7 @@ fun AddApplication(
                     onLongClick = {
                         multipleChoiceEnabled.value = !multipleChoiceEnabled.value
                     },
-                    onClick = {}
+                    onClick = {},
                 )
                 .paint(
                     painter = painterResource(R.drawable.infinity_folder_logo),
@@ -103,7 +106,7 @@ fun AddApplication(
                     icon = Icons.Search,
                     onClickTextConsumer = { text ->
                         query.value = text.ifBlank { null }
-                    }
+                    },
                 ),
                 label = { text ->
                     {
@@ -119,7 +122,7 @@ fun AddApplication(
                 verticalArrangement = Arrangement.spacedBy(32.dp),
                 horizontalArrangement = Arrangement.spacedBy(32.dp),
             ) {
-                items(allApplications) { application ->
+                items(allApplications, key = { it.id }) { application ->
                     ObjectCell(
                         context,
                         application,
@@ -127,24 +130,24 @@ fun AddApplication(
                         selectedObjects,
                     ) {
                         if (multipleChoiceEnabled.value) {
-                            val state: ObjectCellState = calcState(selectedObjects, application)
+                            val state = calcState(selectedObjects, application)
                             if (state == ObjectCellState.SelectionBlank) {
                                 selectedObjects.value += application
                             } else {
-                                selectedObjects.value = selectedObjects.value
-                                    .filter { it.name != application.name }
-                                    .toSet()
+                                selectedObjects.value =
+                                    selectedObjects.value.filter { it.id != application.id }.toSet()
                             }
-
                             return@ObjectCell
                         }
 
-                        folderDao.addObjectsAndSave(currentFolderName, setOf(application))
+                        if (application.id !in existingIds) {
+                            folderDao.addObjectsAndSave(currentFolderId, setOf(application))
+                        }
                         screen.value = Screen.Main
                     }
                 }
             }
         }
-        NavBar(Page.AddApplication, context, screen)
+        NavBar(Page.AddApplication, screen)
     }
 }

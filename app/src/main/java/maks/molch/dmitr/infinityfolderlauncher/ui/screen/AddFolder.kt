@@ -17,6 +17,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -51,24 +53,22 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Red50
 @Composable
 fun AddFolder(
     screen: MutableState<Screen>,
-    currentFolderName: String,
-    folderDao: FolderDao
+    currentFolderId: String,
+    folderDao: FolderDao,
 ) {
     val inputText: MutableState<String> = remember { mutableStateOf("") }
     val selectedNamedIcon: MutableState<Pair<String, ImageSource>?> = remember {
-        mutableStateOf(
-            "Default" to R.drawable.infinity_folder_logo.toImageSource()
-        )
+        mutableStateOf("Default" to R.drawable.infinity_folder_logo.toImageSource())
     }
-    val folderNames: List<String> =
-        folderDao.getOrSaveByName(currentFolderName).launcherObjects
+    val epoch by folderDao.epoch.collectAsState()
+    val folderNames = remember(epoch, currentFolderId) {
+        folderDao.getOrCreate(currentFolderId).launcherObjects
             .mapNotNull { it as? Folder }
             .map { it.name }
+    }
     val folderAlreadyExist = inputText.value in folderNames
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-    ) {
+    Column(modifier = Modifier.fillMaxSize()) {
         TopBar(
             label = "Add Folder",
             secondRightIcon = TopBarIcon(
@@ -76,26 +76,19 @@ fun AddFolder(
                 color = Base70,
                 enabled = inputText.value.isNotBlank() && !folderAlreadyExist,
             ) {
-                val currentFolder: Folder = folderDao.getOrSaveByName(currentFolderName)
-                val newFolder: Folder = folderDao.put(
-                    Folder(
-                        name = inputText.value,
-                        iconName = selectedNamedIcon.value?.first,
-                    )
-                )
-                folderDao.save(
-                    currentFolder.copy(
-                        launcherObjects = currentFolder.launcherObjects + newFolder
-                    )
+                folderDao.createChildFolder(
+                    parentId = currentFolderId,
+                    name = inputText.value,
+                    iconName = selectedNamedIcon.value?.first,
                 )
                 screen.value = Screen.Main
-            }
+            },
         )
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(32.dp)
+            verticalArrangement = Arrangement.spacedBy(32.dp),
         ) {
             FolderInput(inputText, folderAlreadyExist)
             SelectFolderIcon(selectedNamedIcon, folderAlreadyExist)
@@ -105,16 +98,12 @@ fun AddFolder(
 
 @Composable
 fun FolderInput(inputText: MutableState<String>, folderAlreadyExist: Boolean) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Input(
             trailingClickableIcon = inputText.value.ifBlank { null }?.let {
                 ClickableIcon(
                     icon = Icons.Cancel,
-                    onClickTextConsumer = {
-                        inputText.value = ""
-                    }
+                    onClickTextConsumer = { inputText.value = "" },
                 )
             },
             label = {
@@ -146,10 +135,7 @@ fun SelectFolderIcon(
     Column(
         modifier = Modifier
             .alpha(if (folderAlreadyExist) 0.3f else 1.0f)
-            .background(
-                color = Orange20,
-                shape = RoundedCornerShape(28.dp)
-            )
+            .background(color = Orange20, shape = RoundedCornerShape(28.dp))
             .padding(16.dp)
             .fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -167,7 +153,7 @@ fun SelectFolderIcon(
             ) {
                 Image(
                     modifier = Modifier.size(78.dp),
-                    imageSource = namedIcon.second
+                    imageSource = namedIcon.second,
                 )
                 Box(
                     modifier = Modifier
@@ -178,17 +164,12 @@ fun SelectFolderIcon(
                             }
                         },
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         repeat(3) {
                             Box(
                                 modifier = Modifier
                                     .size(24.dp)
-                                    .background(
-                                        Base90,
-                                        RoundedCornerShape(100.dp)
-                                    )
+                                    .background(Base90, RoundedCornerShape(100.dp)),
                             )
                         }
                     }

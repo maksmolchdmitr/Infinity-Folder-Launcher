@@ -18,8 +18,11 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -28,11 +31,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import maks.molch.dmitr.infinityfolderlauncher.MainActivity
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.Screen
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
-import maks.molch.dmitr.infinityfolderlauncher.dao.putFolderName
 import maks.molch.dmitr.infinityfolderlauncher.data.Application
 import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
@@ -50,56 +51,45 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Move
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Settings
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Red70
-import maks.molch.dmitr.infinityfolderlauncher.utils.toastMakeTextAndShow
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen(
     context: Context,
     screen: MutableState<Screen>,
-    currentFolderName: String,
-    folderDao: FolderDao
+    folderStack: SnapshotStateList<String>,
+    currentFolderId: String,
+    folderDao: FolderDao,
 ) {
     val objectNumberOnTheRow = 4
+    val epoch by folderDao.epoch.collectAsState()
+    val currentFolder = remember(epoch, currentFolderId) {
+        folderDao.getOrCreate(currentFolderId)
+    }
+    val launcherObjects = currentFolder.launcherObjects
 
-    val editModeEnabled = remember {
-        mutableStateOf(false)
-    }
-    val moveObjectsEnabled = remember {
-        mutableStateOf(false)
-    }
-    val clearObjectsEnabled = remember {
-        mutableStateOf(false)
-    }
-    val selectedObjects: MutableState<Set<LauncherObject>> = remember {
-        mutableStateOf(
-            setOf()
-        )
-    }
-
-    val launcherObjects: List<LauncherObject> =
-        folderDao.getOrSaveByName(currentFolderName).launcherObjects
-
-    println("All objects: $launcherObjects")
+    val editModeEnabled = remember { mutableStateOf(false) }
+    val moveObjectsEnabled = remember { mutableStateOf(false) }
+    val clearObjectsEnabled = remember { mutableStateOf(false) }
+    val selectedObjects: MutableState<Set<LauncherObject>> = remember { mutableStateOf(setOf()) }
 
     BackHandler(enabled = editModeEnabled.value && moveObjectsEnabled.value) {
         moveObjectsEnabled.value = false
     }
     BackHandler(enabled = editModeEnabled.value && !moveObjectsEnabled.value) {
         editModeEnabled.value = false
+        selectedObjects.value = setOf()
     }
 
     Column(
         modifier = Modifier
             .blur(if (moveObjectsEnabled.value) 4.dp else 0.dp)
-            .clickable(enabled = !moveObjectsEnabled.value) {}
+            .clickable(enabled = !moveObjectsEnabled.value) {},
     ) {
         if (editModeEnabled.value && !moveObjectsEnabled.value) {
             TopBar(
                 "Edit mode",
-                leftIcon = TopBarIcon(Icons.Settings) {
-                    context.toastMakeTextAndShow("Settings top bar")
-                },
+                leftIcon = TopBarIcon(Icons.Settings) {},
                 firstRightIcon = TopBarIcon(
                     icon = Icons.Move,
                     enabled = selectedObjects.value.isNotEmpty(),
@@ -121,8 +111,11 @@ fun MainScreen(
                 .combinedClickable(
                     onLongClick = {
                         editModeEnabled.value = !editModeEnabled.value
+                        if (!editModeEnabled.value) {
+                            selectedObjects.value = setOf()
+                        }
                     },
-                    onClick = {}
+                    onClick = {},
                 )
                 .paint(
                     painter = painterResource(R.drawable.infinity_folder_logo),
@@ -136,7 +129,7 @@ fun MainScreen(
                 verticalArrangement = Arrangement.spacedBy(32.dp),
                 horizontalArrangement = Arrangement.spacedBy(32.dp),
             ) {
-                items(launcherObjects) { launcherObject ->
+                items(launcherObjects, key = { it.id }) { launcherObject ->
                     ObjectCell(
                         context,
                         launcherObject,
@@ -144,16 +137,14 @@ fun MainScreen(
                         selectedObjects,
                     ) {
                         if (editModeEnabled.value) {
-                            println("Selected objects: $selectedObjects")
-                            val state: ObjectCellState = calcState(selectedObjects, launcherObject)
+                            val state = calcState(selectedObjects, launcherObject)
                             if (state == ObjectCellState.SelectionBlank) {
                                 selectedObjects.value += launcherObject
                             } else {
-                                selectedObjects.value = selectedObjects.value
-                                    .filter { it.name != launcherObject.name }
-                                    .toSet()
+                                selectedObjects.value =
+                                    selectedObjects.value.filter { it.id != launcherObject.id }
+                                        .toSet()
                             }
-
                             return@ObjectCell
                         }
 
@@ -167,34 +158,27 @@ fun MainScreen(
                                     }
                             }
 
-                            is Folder -> {
-                                val intent = Intent(context, MainActivity::class.java)
-                                intent.putFolderName(launcherObject.name)
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            }
+                            is Folder -> folderStack.add(launcherObject.id)
                         }
                     }
                 }
             }
         }
         if (editModeEnabled.value && !moveObjectsEnabled.value) {
-            NavBar(Page.Home, context, screen)
+            NavBar(Page.Home, screen)
         }
     }
     if (moveObjectsEnabled.value) {
         Box(
             modifier = Modifier
                 .background(Color.Unspecified)
-                .clickable {
-                    moveObjectsEnabled.value = false
-                }
+                .clickable { moveObjectsEnabled.value = false }
                 .fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
             SelectFolder(
                 folderDao,
-                currentFolderName,
+                currentFolderId,
                 selectedObjects,
                 moveObjectsEnabled,
                 editModeEnabled,
@@ -206,9 +190,7 @@ fun MainScreen(
             modifier = Modifier
                 .padding(16.dp)
                 .background(Color.Unspecified)
-                .clickable {
-                    moveObjectsEnabled.value = false
-                }
+                .clickable { clearObjectsEnabled.value = false }
                 .fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
@@ -224,7 +206,7 @@ fun MainScreen(
                     editModeEnabled.value = false
                 },
                 onRemoveClick = {
-                    folderDao.removeObjectsAndSave(currentFolderName, selectedObjects.value)
+                    folderDao.removeObjectsAndSave(currentFolderId, selectedObjects.value)
                     selectedObjects.value = setOf()
                     clearObjectsEnabled.value = false
                     editModeEnabled.value = false

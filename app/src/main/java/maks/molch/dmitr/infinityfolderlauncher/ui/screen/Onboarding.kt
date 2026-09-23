@@ -165,7 +165,6 @@ private fun DescriptorButtonRow(
                 if (step.intValue != 1) {
                     step.intValue--
                 }
-                println("Step = ${step.intValue}")
             },
         ) {
             Row(
@@ -186,9 +185,9 @@ private fun DescriptorButtonRow(
             onClick = {
                 if (step.intValue == 3) {
                     finish(screen, onboardingDao)
+                } else {
+                    step.intValue++
                 }
-                step.intValue++
-                println("Step = ${step.intValue}")
             },
         ) {
             Row(

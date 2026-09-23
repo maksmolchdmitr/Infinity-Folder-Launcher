@@ -32,10 +32,10 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Orange10
 @Composable
 fun SelectFolder(
     folderDao: FolderDao,
-    currentFolderName: String,
+    currentFolderId: String,
     selectedObjects: MutableState<Set<LauncherObject>>,
     moveObjectsEnabled: MutableState<Boolean>,
-    editModeEnabled: MutableState<Boolean>
+    editModeEnabled: MutableState<Boolean>,
 ) {
     val selectedFolder: MutableState<Folder?> = remember { mutableStateOf(null) }
 
@@ -54,10 +54,8 @@ fun SelectFolder(
             fontWeight = FontWeight.Medium,
             color = Base100,
         )
-        FolderSearch(folderDao, selectedFolder)
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(31.dp)
-        ) {
+        FolderSearch(folderDao, selectedFolder, excludeFolderId = currentFolderId)
+        Row(horizontalArrangement = Arrangement.spacedBy(31.dp)) {
             IconButton(
                 onClick = {
                     moveObjectsEnabled.value = false
@@ -78,20 +76,17 @@ fun SelectFolder(
             IconButton(
                 onClick = {
                     selectedFolder.value?.let { folder ->
-                        onMoveClick(
-                            folder.name,
-                            currentFolderName,
-                            folderDao,
-                            selectedObjects,
-                            moveObjectsEnabled,
-                            editModeEnabled,
-                        )
+                        folderDao.addObjectsAndSave(folder.id, selectedObjects.value)
+                        folderDao.removeObjectsAndSave(currentFolderId, selectedObjects.value)
+                        selectedObjects.value = setOf()
+                        moveObjectsEnabled.value = false
+                        editModeEnabled.value = false
                     }
                 },
                 modifier = Modifier
                     .background(
                         color = if (selectedFolder.value == null) Base20 else Green50,
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
                     )
                     .weight(1f),
             ) {
@@ -105,18 +100,4 @@ fun SelectFolder(
             }
         }
     }
-}
-
-private fun onMoveClick(
-    folderName: String,
-    currentFolderName: String,
-    folderDao: FolderDao,
-    selectedObjects: MutableState<Set<LauncherObject>>,
-    moveObjectsEnabled: MutableState<Boolean>,
-    editModeEnabled: MutableState<Boolean>,
-) {
-    folderDao.addObjectsAndSave(folderName, selectedObjects.value)
-    folderDao.removeObjectsAndSave(currentFolderName, selectedObjects.value)
-    moveObjectsEnabled.value = false
-    editModeEnabled.value = false
 }

@@ -97,8 +97,8 @@ fun ObjectCell(
 
 fun calcState(
     selectedObjects: MutableState<Set<LauncherObject>>,
-    launcherObject: LauncherObject
-) = if (selectedObjects.value.any { it.name == launcherObject.name }) {
+    launcherObject: LauncherObject,
+) = if (selectedObjects.value.any { it.id == launcherObject.id }) {
     ObjectCellState.SelectionMarked
 } else {
     ObjectCellState.SelectionBlank

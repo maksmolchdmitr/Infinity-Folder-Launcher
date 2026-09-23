@@ -1,6 +1,5 @@
 package maks.molch.dmitr.infinityfolderlauncher.ui.component.common
 
-import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -27,27 +26,22 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base10
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base50
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Green50
-import maks.molch.dmitr.infinityfolderlauncher.utils.toastMakeTextAndShow
 
 @Composable
-fun NavBar(currentState: Page, context: Context, screen: MutableState<Screen>) {
+fun NavBar(currentState: Page, screen: MutableState<Screen>) {
     val iconMap = mapOf(
         Page.Home to Icons.Home,
         Page.AddApplication to Icons.Add,
         Page.Folder to Icons.FolderMultiple,
         Page.Widget to Icons.Widgets,
     )
-    Row(
-        modifier = Modifier
-            .height(56.dp)
-    ) {
+    Row(modifier = Modifier.height(56.dp)) {
         Page.entries.forEach { page ->
             Navigation(
                 this,
                 iconMap[page]!!,
                 currentState == page,
             ) {
-                context.toastMakeTextAndShow("${page.name} nav bar")
                 screen.value = when (page) {
                     Page.Home -> Screen.Main
                     Page.AddApplication -> Screen.AddApplication

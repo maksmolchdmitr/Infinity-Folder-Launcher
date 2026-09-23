@@ -1,0 +1,14 @@
+# Heavy / generated — keep Cursor index light
+.gradle/
+app/build/
+build/
+.idea/
+.kotlin/
+captures/
+*.iml
+local.properties
+.DS_Store
+*.apk
+*.aab
+*.dex
+*.class
