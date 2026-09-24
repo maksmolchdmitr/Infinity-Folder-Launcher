@@ -4,10 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,18 +45,19 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.AppRemoveDial
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.ConfirmRemove
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.NavBar
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Page
-import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.RenameFolderDialog
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TopBar
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TopBarIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Cancel
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Delete
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Edit
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Left
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Move
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Settings
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Red70
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.WallpaperColor
+import maks.molch.dmitr.infinityfolderlauncher.utils.MAIN_FOLDER_ID
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen(
     context: Context,
@@ -67,6 +66,7 @@ fun MainScreen(
     currentFolderId: String,
     folderDao: FolderDao,
     settingsDao: SettingsDao,
+    onEditFolder: (Folder) -> Unit,
 ) {
     val columns by settingsDao.mainColumns.collectAsState()
     val epoch by folderDao.epoch.collectAsState()
@@ -77,17 +77,30 @@ fun MainScreen(
     val editModeEnabled = remember { mutableStateOf(false) }
     val moveObjectsEnabled = remember { mutableStateOf(false) }
     val clearObjectsEnabled = remember { mutableStateOf(false) }
-    val renameFolderEnabled = remember { mutableStateOf(false) }
     val appActionEnabled = remember { mutableStateOf(false) }
+    val widgetActionEnabled = remember { mutableStateOf(false) }
     val selectedObjects: MutableState<Set<LauncherObject>> = remember { mutableStateOf(setOf()) }
 
     val selectedSingleFolder = selectedObjects.value.singleOrNull() as? Folder
     val selectedSingleApp = selectedObjects.value.singleOrNull() as? Application
+    val selectedSingleWidget = selectedObjects.value.singleOrNull() as? WebsiteShortcut
     val launcherObjects = currentFolder.launcherObjects
+    val title = if (currentFolderId == MAIN_FOLDER_ID) {
+        stringResource(R.string.app_name)
+    } else {
+        currentFolder.name
+    }
 
-    BackHandler(enabled = renameFolderEnabled.value || appActionEnabled.value) {
-        renameFolderEnabled.value = false
+    fun exitEditMode() {
+        editModeEnabled.value = false
+        selectedObjects.value = setOf()
         appActionEnabled.value = false
+        widgetActionEnabled.value = false
+    }
+
+    BackHandler(enabled = appActionEnabled.value || widgetActionEnabled.value) {
+        appActionEnabled.value = false
+        widgetActionEnabled.value = false
     }
     BackHandler(enabled = editModeEnabled.value && moveObjectsEnabled.value) {
         moveObjectsEnabled.value = false
@@ -95,16 +108,17 @@ fun MainScreen(
     BackHandler(
         enabled = editModeEnabled.value &&
             !moveObjectsEnabled.value &&
-            !renameFolderEnabled.value &&
-            !appActionEnabled.value,
+            !appActionEnabled.value &&
+            !widgetActionEnabled.value,
     ) {
-        editModeEnabled.value = false
-        selectedObjects.value = setOf()
+        exitEditMode()
     }
 
     val overlayOpen =
-        moveObjectsEnabled.value || renameFolderEnabled.value ||
-            clearObjectsEnabled.value || appActionEnabled.value
+        moveObjectsEnabled.value ||
+            clearObjectsEnabled.value ||
+            appActionEnabled.value ||
+            widgetActionEnabled.value
 
     Column(
         modifier = Modifier
@@ -112,49 +126,63 @@ fun MainScreen(
             .background(WallpaperColor)
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
-        if (editModeEnabled.value && !overlayOpen) {
-            TopBar(
-                stringResource(R.string.edit_mode),
-                leftIcon = TopBarIcon(Icons.Settings) {
-                    screen.value = Screen.Settings
-                },
-                firstRightIcon = TopBarIcon(
-                    icon = Icons.Edit,
-                    enabled = selectedSingleFolder != null,
-                ) { renameFolderEnabled.value = true },
-                secondRightIcon = TopBarIcon(
-                    icon = Icons.Move,
-                    enabled = selectedObjects.value.isNotEmpty(),
-                ) { moveObjectsEnabled.value = true },
-                thirdRightIcon = TopBarIcon(
-                    Icons.Cancel,
-                    enabled = selectedObjects.value.isNotEmpty(),
-                    color = Red70,
-                ) {
-                    if (selectedSingleApp != null && selectedObjects.value.size == 1) {
-                        appActionEnabled.value = true
-                    } else {
-                        clearObjectsEnabled.value = true
-                    }
-                },
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .combinedClickable(
-                    onLongClick = {
-                        editModeEnabled.value = !editModeEnabled.value
-                        if (!editModeEnabled.value) {
-                            selectedObjects.value = setOf()
-                            renameFolderEnabled.value = false
-                            appActionEnabled.value = false
+        if (!overlayOpen) {
+            if (editModeEnabled.value) {
+                TopBar(
+                    stringResource(R.string.edit_mode),
+                    leftIcon = TopBarIcon(Icons.Cancel) { exitEditMode() },
+                    firstRightIcon = TopBarIcon(
+                        icon = Icons.Edit,
+                        enabled = selectedSingleFolder != null,
+                    ) {
+                        selectedSingleFolder?.let {
+                            onEditFolder(it)
+                            exitEditMode()
                         }
                     },
-                    onClick = {},
-                ),
-        ) {
+                    secondRightIcon = TopBarIcon(
+                        icon = Icons.Move,
+                        enabled = selectedObjects.value.isNotEmpty(),
+                    ) { moveObjectsEnabled.value = true },
+                    thirdRightIcon = TopBarIcon(
+                        Icons.Delete,
+                        enabled = selectedObjects.value.isNotEmpty(),
+                        color = Red70,
+                    ) {
+                        when {
+                            selectedSingleApp != null && selectedObjects.value.size == 1 -> {
+                                appActionEnabled.value = true
+                            }
+                            selectedSingleWidget != null && selectedObjects.value.size == 1 -> {
+                                widgetActionEnabled.value = true
+                            }
+                            else -> clearObjectsEnabled.value = true
+                        }
+                    },
+                )
+            } else {
+                TopBar(
+                    label = title,
+                    leftIcon = if (currentFolderId != MAIN_FOLDER_ID) {
+                        TopBarIcon(Icons.Left) {
+                            if (folderStack.size > 1) {
+                                folderStack.removeAt(folderStack.lastIndex)
+                            }
+                        }
+                    } else {
+                        null
+                    },
+                    firstRightIcon = TopBarIcon(Icons.Edit) {
+                        editModeEnabled.value = true
+                    },
+                    secondRightIcon = TopBarIcon(Icons.Settings) {
+                        screen.value = Screen.Settings
+                    },
+                )
+            }
+        }
+
+        Box(modifier = Modifier.weight(1f)) {
             LazyVerticalGrid(
                 modifier = Modifier.padding(16.dp),
                 columns = GridCells.Fixed(columns),
@@ -236,29 +264,6 @@ fun MainScreen(
         }
     }
 
-    if (renameFolderEnabled.value && selectedSingleFolder != null) {
-        val folderToRename = selectedSingleFolder
-        Overlay(onDismiss = { renameFolderEnabled.value = false }) {
-            RenameFolderDialog(
-                initialName = folderToRename.name,
-                nameTaken = { candidate ->
-                    currentFolder.launcherObjects.any {
-                        it is Folder && it.id != folderToRename.id && it.name == candidate
-                    }
-                },
-                onCancel = { renameFolderEnabled.value = false },
-                onConfirm = { newName ->
-                    if (folderDao.renameFolder(folderToRename.id, newName) ==
-                        FolderDao.RenameResult.Ok
-                    ) {
-                        selectedObjects.value = setOf()
-                        renameFolderEnabled.value = false
-                    }
-                },
-            )
-        }
-    }
-
     if (appActionEnabled.value && selectedSingleApp != null) {
         val app = selectedSingleApp
         Overlay(onDismiss = { appActionEnabled.value = false }) {
@@ -284,6 +289,24 @@ fun MainScreen(
                             ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                         )
                     }
+                },
+            )
+        }
+    }
+
+    if (widgetActionEnabled.value && selectedSingleWidget != null) {
+        val widget = selectedSingleWidget
+        Overlay(onDismiss = { widgetActionEnabled.value = false }) {
+            ConfirmRemove(
+                mainText = stringResource(R.string.remove_widget_title, widget.name),
+                descriptionText = stringResource(R.string.remove_widget_desc),
+                removeText = stringResource(R.string.clear),
+                onCancelClick = { widgetActionEnabled.value = false },
+                onRemoveClick = {
+                    folderDao.removeObjectsAndSave(currentFolderId, setOf(widget))
+                    selectedObjects.value = setOf()
+                    widgetActionEnabled.value = false
+                    editModeEnabled.value = false
                 },
             )
         }

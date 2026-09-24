@@ -1,12 +1,12 @@
 package maks.molch.dmitr.infinityfolderlauncher.ui.component.common
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -15,9 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.Image
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.ImageSource
+import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
+import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base40
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.DefaultFontStyle
+import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Green50
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Input(
     leadingClickableIcon: ClickableIcon? = null,
@@ -34,10 +36,7 @@ fun Input(
                     imageSource = imageSource,
                     modifier = Modifier
                         .size(24.dp)
-                        .combinedClickable(
-                            onClick = { it.onClickTextConsumer?.invoke(input.value) },
-                            onLongClick = { it.onLongClickConsumer?.invoke(input.value) }
-                        ),
+                        .clickable { it.onClickTextConsumer?.invoke(input.value) },
                 )
             }
         }
@@ -49,10 +48,7 @@ fun Input(
                     imageSource = imageSource,
                     modifier = Modifier
                         .size(24.dp)
-                        .combinedClickable(
-                            onClick = { it.onClickTextConsumer?.invoke(input.value) },
-                            onLongClick = { it.onLongClickConsumer?.invoke(input.value) }
-                        )
+                        .clickable { it.onClickTextConsumer?.invoke(input.value) },
                 )
             }
         }
@@ -68,21 +64,25 @@ fun Input(
         label = label.invoke(input.value),
         leadingIcon = leadingIcon,
         trailingIcon = trailingIcon,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Base0,
+            unfocusedContainerColor = Base0,
+            disabledContainerColor = Base0,
+            focusedBorderColor = Green50,
+            unfocusedBorderColor = Base40,
+        ),
     )
 }
 
 data class ClickableIcon(
     val icon: ImageSource?,
     val onClickTextConsumer: ((String) -> Unit)? = null,
-    val onLongClickConsumer: ((String) -> Unit)? = null,
 ) {
     constructor(
         icon: Any,
         onClickTextConsumer: ((String) -> Unit)? = null,
-        onLongClickConsumer: ((String) -> Unit)? = null,
     ) : this(
         ImageSource.from(icon),
         onClickTextConsumer,
-        onLongClickConsumer,
     )
 }

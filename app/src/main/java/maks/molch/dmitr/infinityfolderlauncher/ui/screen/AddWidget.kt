@@ -4,9 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,10 +24,14 @@ import androidx.compose.ui.unit.sp
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.Screen
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
+import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.data.WebsiteShortcut
 import maks.molch.dmitr.infinityfolderlauncher.data.normalizeWebsiteUrl
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.FolderSearch
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.ClickableIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Input
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.NavBar
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Page
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TextBodyS
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TextH4
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TopBar
@@ -32,7 +39,6 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TopBarIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Add
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Cancel
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
-import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base40
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base5
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base70
@@ -53,7 +59,8 @@ fun AddWidgetScreen(
         WidgetMode.Chooser -> Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Base5),
+                .background(Base5)
+                .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
             TopBar(
                 label = stringResource(R.string.add_widget),
@@ -62,7 +69,9 @@ fun AddWidgetScreen(
                 },
             )
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 WidgetOptionCard(
@@ -77,6 +86,7 @@ fun AddWidgetScreen(
                     onClick = {},
                 )
             }
+            NavBar(Page.Widget, screen)
         }
 
         WidgetMode.Website -> AddWebsiteShortcut(
@@ -127,13 +137,20 @@ private fun AddWebsiteShortcut(
 ) {
     val title = remember { mutableStateOf("") }
     val url = remember { mutableStateOf("") }
+    val selectedFolder: MutableState<Folder?> = remember {
+        mutableStateOf(folderDao.getById(currentFolderId))
+    }
     val normalized = normalizeWebsiteUrl(url.value)
-    val valid = title.value.isNotBlank() && normalized.contains('.') && normalized.length > 8
+    val valid = title.value.isNotBlank() &&
+        normalized.contains('.') &&
+        normalized.length > 8 &&
+        selectedFolder.value != null
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Base5),
+            .background(Base5)
+            .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
         TopBar(
             label = stringResource(R.string.website_shortcut),
@@ -143,8 +160,9 @@ private fun AddWebsiteShortcut(
                 color = Base70,
                 enabled = valid,
             ) {
+                val targetId = selectedFolder.value?.id ?: currentFolderId
                 folderDao.addObjectsAndSave(
-                    currentFolderId,
+                    targetId,
                     setOf(
                         WebsiteShortcut(
                             name = title.value.trim(),
@@ -156,7 +174,9 @@ private fun AddWebsiteShortcut(
             },
         )
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .weight(1f)
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Input(
@@ -193,9 +213,15 @@ private fun AddWebsiteShortcut(
                 },
                 inputText = url,
             )
-            if (url.value.isNotBlank() && !valid) {
+            if (url.value.isNotBlank() && !(normalized.contains('.') && normalized.length > 8)) {
                 TextBodyS(text = stringResource(R.string.invalid_url), color = Red50)
             }
+            TextH4(text = stringResource(R.string.target_folder))
+            FolderSearch(
+                folderDao = folderDao,
+                selectedFolder = selectedFolder,
+            )
         }
+        NavBar(Page.Widget, screen)
     }
 }

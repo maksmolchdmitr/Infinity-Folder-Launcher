@@ -1,19 +1,21 @@
 package maks.molch.dmitr.infinityfolderlauncher.ui.screen
 
 import android.content.Context
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -33,6 +35,7 @@ import maks.molch.dmitr.infinityfolderlauncher.data.Application
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.ObjectCell
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.ObjectCellState
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.SelectionStyle
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.calcState
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.ClickableIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Input
@@ -41,15 +44,15 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Page
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TextBodyS
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TopBar
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TopBarIcon
-import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Add
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Cancel
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.CheckboxMarked
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Done
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Search
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base40
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base5
-import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base70
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Green50
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AddApplication(
     context: Context,
@@ -61,20 +64,40 @@ fun AddApplication(
 ) {
     val columns by settingsDao.searchColumns.collectAsState()
     val epoch by folderDao.epoch.collectAsState()
+    val cachedApps by applicationDao.apps.collectAsState()
+    val loading by applicationDao.loading.collectAsState()
 
     val multipleChoiceEnabled: MutableState<Boolean> = remember { mutableStateOf(false) }
     val selectedObjects: MutableState<Set<LauncherObject>> = remember { mutableStateOf(setOf()) }
-    val query: MutableState<String?> = remember { mutableStateOf(null) }
+    val query: MutableState<String> = remember { mutableStateOf("") }
 
     val existingIds = remember(epoch, currentFolderId) {
         folderDao.getOrCreate(currentFolderId).launcherObjects.map { it.id }.toSet()
     }
 
-    val allApplications: List<Application> = remember(query.value) {
-        applicationDao.getInstalledApplications()
-            .filter { application ->
-                query.value?.let { application.name.lowercase().contains(it.lowercase()) } ?: true
-            }
+    val allApplications: List<Application> = remember(cachedApps, query.value) {
+        val q = query.value.trim().lowercase()
+        if (q.isEmpty()) {
+            cachedApps
+        } else {
+            cachedApps.filter { it.name.lowercase().contains(q) }
+        }
+    }
+
+    fun exitMultiSelect() {
+        multipleChoiceEnabled.value = false
+        selectedObjects.value = setOf()
+    }
+
+    fun confirmSelection() {
+        if (selectedObjects.value.isEmpty()) return
+        folderDao.addObjectsAndSave(currentFolderId, selectedObjects.value)
+        exitMultiSelect()
+        screen.value = Screen.Main
+    }
+
+    BackHandler(enabled = multipleChoiceEnabled.value) {
+        exitMultiSelect()
     }
 
     Column(
@@ -83,36 +106,36 @@ fun AddApplication(
             .background(Base5)
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
-        TopBar(
-            label = stringResource(R.string.add_app),
-            secondRightIcon = TopBarIcon(
-                icon = Icons.Add,
-                color = Base70,
-                enabled = selectedObjects.value.isNotEmpty(),
-            ) {
-                folderDao.addObjectsAndSave(currentFolderId, selectedObjects.value)
-                screen.value = Screen.Main
-            },
-        )
+        if (multipleChoiceEnabled.value) {
+            TopBar(
+                label = stringResource(R.string.multi_select_apps),
+                leftIcon = TopBarIcon(Icons.Cancel) { exitMultiSelect() },
+                secondRightIcon = TopBarIcon(
+                    icon = Icons.Done,
+                    color = Green50,
+                    enabled = selectedObjects.value.isNotEmpty(),
+                ) { confirmSelection() },
+            )
+        } else {
+            TopBar(
+                label = stringResource(R.string.add_app),
+                secondRightIcon = TopBarIcon(Icons.CheckboxMarked) {
+                    multipleChoiceEnabled.value = true
+                },
+            )
+        }
+
         Column(
             modifier = Modifier
                 .padding(16.dp)
-                .weight(1f)
-                .combinedClickable(
-                    onLongClick = {
-                        multipleChoiceEnabled.value = !multipleChoiceEnabled.value
-                    },
-                    onClick = {},
-                ),
+                .weight(1f),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(32.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             Input(
                 trailingClickableIcon = ClickableIcon(
                     icon = Icons.Search,
-                    onClickTextConsumer = { text ->
-                        query.value = text.ifBlank { null }
-                    },
+                    onClickTextConsumer = { text -> query.value = text },
                 ),
                 label = { text ->
                     {
@@ -122,34 +145,59 @@ fun AddApplication(
                         )
                     }
                 },
+                inputText = query,
             )
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(columns),
-                verticalArrangement = Arrangement.spacedBy(32.dp),
-                horizontalArrangement = Arrangement.spacedBy(32.dp),
-            ) {
-                items(allApplications, key = { it.id }) { application ->
-                    ObjectCell(
-                        context,
-                        application,
-                        multipleChoiceEnabled,
-                        selectedObjects,
+            when {
+                loading && cachedApps.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        if (multipleChoiceEnabled.value) {
-                            val state = calcState(selectedObjects, application)
-                            if (state == ObjectCellState.SelectionBlank) {
-                                selectedObjects.value += application
-                            } else {
-                                selectedObjects.value =
-                                    selectedObjects.value.filter { it.id != application.id }.toSet()
-                            }
-                            return@ObjectCell
-                        }
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(40.dp),
+                            color = Green50,
+                        )
+                    }
+                }
 
-                        if (application.id !in existingIds) {
-                            folderDao.addObjectsAndSave(currentFolderId, setOf(application))
+                else -> {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(columns),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    ) {
+                        items(allApplications, key = { it.id }) { application ->
+                            ObjectCell(
+                                context = context,
+                                launcherObject = application,
+                                editModeEnabled = multipleChoiceEnabled,
+                                selectedObjects = selectedObjects,
+                                selectionStyle = SelectionStyle.Checkbox,
+                                onClick = {
+                                    if (multipleChoiceEnabled.value) {
+                                        val state = calcState(selectedObjects, application)
+                                        selectedObjects.value =
+                                            if (state == ObjectCellState.SelectionBlank) {
+                                                selectedObjects.value + application
+                                            } else {
+                                                selectedObjects.value
+                                                    .filter { it.id != application.id }
+                                                    .toSet()
+                                            }
+                                    } else {
+                                        if (application.id !in existingIds) {
+                                            folderDao.addObjectsAndSave(
+                                                currentFolderId,
+                                                setOf(application),
+                                            )
+                                        }
+                                        screen.value = Screen.Main
+                                    }
+                                },
+                            )
                         }
-                        screen.value = Screen.Main
                     }
                 }
             }

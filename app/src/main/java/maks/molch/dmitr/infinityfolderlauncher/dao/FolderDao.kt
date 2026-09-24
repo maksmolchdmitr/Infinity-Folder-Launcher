@@ -105,30 +105,43 @@ class FolderDao(context: Context) {
         bump()
     }
 
-    fun renameFolder(folderId: String, newName: String): RenameResult {
+    fun renameFolder(folderId: String, newName: String): RenameResult =
+        updateFolder(folderId, newName, iconName = null, keepIcon = true)
+
+    fun updateFolder(
+        folderId: String,
+        newName: String,
+        iconName: String?,
+        keepIcon: Boolean = false,
+    ): RenameResult {
         if (folderId == MAIN_FOLDER_ID) return RenameResult.Forbidden
         val trimmed = newName.trim()
         if (trimmed.isBlank()) return RenameResult.Blank
         if (trimmed == MAIN_FOLDER_NAME) return RenameResult.Forbidden
 
         val folder = getById(folderId) ?: return RenameResult.NotFound
-        if (folder.name == trimmed) return RenameResult.Ok
+        val nextIcon = if (keepIcon) folder.iconName else iconName
+        val nameUnchanged = folder.name == trimmed
+        val iconUnchanged = folder.iconName == nextIcon
+        if (nameUnchanged && iconUnchanged) return RenameResult.Ok
 
-        val siblingConflict = getAll().any { parent ->
-            parent.launcherObjects.any { it.id == folderId } &&
-                parent.launcherObjects.any { child ->
-                    child is Folder && child.id != folderId && child.name == trimmed
-                }
+        if (!nameUnchanged) {
+            val siblingConflict = getAll().any { parent ->
+                parent.launcherObjects.any { it.id == folderId } &&
+                    parent.launcherObjects.any { child ->
+                        child is Folder && child.id != folderId && child.name == trimmed
+                    }
+            }
+            if (siblingConflict) return RenameResult.NameTaken
         }
-        if (siblingConflict) return RenameResult.NameTaken
 
-        saveQuiet(folder.copy(name = trimmed))
+        saveQuiet(folder.copy(name = trimmed, iconName = nextIcon))
         for (parent in getAll()) {
             var changed = false
             val updated = parent.launcherObjects.map { child ->
                 if (child is Folder && child.id == folderId) {
                     changed = true
-                    child.copy(name = trimmed)
+                    child.copy(name = trimmed, iconName = nextIcon)
                 } else {
                     child
                 }

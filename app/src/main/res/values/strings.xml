@@ -23,6 +23,7 @@
     <string name="folder_exists">Папка с таким именем уже есть</string>
     <string name="choose_target_folder">Куда переместить объекты</string>
     <string name="search_apps_hint">Поиск приложений</string>
+    <string name="multi_select_apps">Множественный выбор</string>
     <string name="remove_from_folder">Убрать из папки</string>
     <string name="uninstall_app">Удалить с телефона</string>
     <string name="uninstall_confirm">Удалить приложение с устройства?</string>
@@ -31,4 +32,12 @@
     <string name="select_folder_icon">Иконка папки</string>
     <string name="create">Создать</string>
     <string name="invalid_url">Укажите корректный URL</string>
+    <string name="edit_folder">Изменить папку</string>
+    <string name="target_folder">Папка</string>
+    <string name="folder_search_hint">Имя папки</string>
+    <string name="remove_widget_title">Убрать «%1$s»?</string>
+    <string name="remove_widget_desc">Ярлык сайта исчезнет с экрана.</string>
+    <string name="onboarding_skip">Пропустить</string>
+    <string name="onboarding_lets_go">Поехали</string>
+    <string name="empty_query">Ничего не найдено</string>
 </resources>

@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -155,7 +156,7 @@ private fun DescriptorButtonRow(
                 modifier = Modifier.fillMaxHeight(),
                 onClick = { finish(screen, onboardingDao) }
             ) {
-                Text("Skip")
+                Text(stringResource(R.string.onboarding_skip))
             }
         }
         IconButton(
@@ -195,7 +196,7 @@ private fun DescriptorButtonRow(
             ) {
                 if (step.intValue == 3) {
                     Text(
-                        "Let's go",
+                        stringResource(R.string.onboarding_lets_go),
                         fontFamily = DefaultFontFamily,
                         fontSize = 16.sp,
                         color = Base0,

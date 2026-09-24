@@ -8,10 +8,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import maks.molch.dmitr.infinityfolderlauncher.dao.ApplicationDao
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
-import maks.molch.dmitr.infinityfolderlauncher.dao.OnboardingDao
-import maks.molch.dmitr.infinityfolderlauncher.dao.SettingsDao
+import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.AddApplication
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.AddFolder
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.AddWidgetScreen
@@ -23,10 +21,11 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.theme.InfinityFolderLauncherTh
 import maks.molch.dmitr.infinityfolderlauncher.utils.MAIN_FOLDER_ID
 
 class MainActivity : ComponentActivity() {
-    private val onboardingDao by lazy { OnboardingDao(this) }
-    private val applicationDao by lazy { ApplicationDao(this) }
-    private val folderDao by lazy { FolderDao(this) }
-    private val settingsDao by lazy { SettingsDao(this) }
+    private val app get() = application as InfinityFolderApp
+    private val onboardingDao get() = app.onboardingDao
+    private val applicationDao get() = app.applicationDao
+    private val folderDao get() = app.folderDao
+    private val settingsDao get() = app.settingsDao
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +36,7 @@ class MainActivity : ComponentActivity() {
                 val screen = remember { mutableStateOf(Screen.Splash) }
                 val folderStack = remember { mutableStateListOf(MAIN_FOLDER_ID) }
                 val currentFolderId = folderStack.last()
+                val folderToEdit = remember { mutableStateOf<Folder?>(null) }
 
                 BackHandler(enabled = folderStack.size > 1 && screen.value == Screen.Main) {
                     folderStack.removeAt(folderStack.lastIndex)
@@ -49,9 +49,11 @@ class MainActivity : ComponentActivity() {
                 BackHandler(
                     enabled = screen.value == Screen.AddApplication ||
                         screen.value == Screen.AddFolder ||
+                        screen.value == Screen.EditFolder ||
                         screen.value == Screen.AddWidget ||
                         screen.value == Screen.Settings,
                 ) {
+                    folderToEdit.value = null
                     screen.value = Screen.Main
                 }
 
@@ -63,6 +65,10 @@ class MainActivity : ComponentActivity() {
                         currentFolderId = currentFolderId,
                         folderDao = folderDao,
                         settingsDao = settingsDao,
+                        onEditFolder = { folder ->
+                            folderToEdit.value = folderDao.getById(folder.id) ?: folder
+                            screen.value = Screen.EditFolder
+                        },
                     )
 
                     Screen.Splash -> SplashScreen(screen, onboardingDao)
@@ -80,6 +86,14 @@ class MainActivity : ComponentActivity() {
                         screen,
                         currentFolderId,
                         folderDao,
+                    )
+
+                    Screen.EditFolder -> AddFolder(
+                        screen = screen,
+                        currentFolderId = currentFolderId,
+                        folderDao = folderDao,
+                        folderToEdit = folderToEdit.value,
+                        onEditDone = { folderToEdit.value = null },
                     )
 
                     Screen.AddWidget -> AddWidgetScreen(
@@ -101,6 +115,7 @@ enum class Screen {
     Onboarding,
     AddApplication,
     AddFolder,
+    EditFolder,
     AddWidget,
     Settings,
 }

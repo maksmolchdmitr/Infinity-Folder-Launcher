@@ -12,7 +12,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
 import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.data.getIcon
@@ -21,6 +23,7 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Dropdown
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.DropdownItem
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Input
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TextBodyS
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Cancel
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.FolderSearch
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
@@ -54,17 +57,22 @@ fun FolderSearch(
                 ClickableIcon(icon = it)
             },
             trailingClickableIcon = ClickableIcon(
-                icon = Icons.FolderSearch,
+                icon = if (selectedFolder.value != null) Icons.Cancel else Icons.FolderSearch,
                 onClickTextConsumer = { searchText ->
-                    foldersQuery.value = searchText
-                    dropdownOn.value = true
+                    if (selectedFolder.value != null) {
+                        selectedFolder.value = null
+                        foldersQuery.value = ""
+                        dropdownOn.value = false
+                    } else {
+                        foldersQuery.value = searchText
+                        dropdownOn.value = true
+                    }
                 },
-                onLongClickConsumer = { selectedFolder.value = null },
             ),
             label = {
                 {
                     TextBodyS(
-                        text = "Folder name",
+                        text = stringResource(R.string.folder_search_hint),
                         color = if (selectedFolder.value == null) Base40 else Green50,
                     )
                 }

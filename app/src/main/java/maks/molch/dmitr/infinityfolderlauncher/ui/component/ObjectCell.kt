@@ -2,11 +2,9 @@ package maks.molch.dmitr.infinityfolderlauncher.ui.component
 
 import android.content.Context
 import android.content.pm.PackageManager
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -41,14 +38,21 @@ import maks.molch.dmitr.infinityfolderlauncher.data.WebsiteShortcut
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.DrawableImage
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.Image
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.ImageSource
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.CheckboxBlank
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.CheckboxMarked
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Search
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base10
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base40
+import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base70
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Green50
 
-@OptIn(ExperimentalFoundationApi::class)
+enum class SelectionStyle {
+    CornerBadge,
+    Checkbox,
+}
+
 @Composable
 fun ObjectCell(
     context: Context,
@@ -56,6 +60,7 @@ fun ObjectCell(
     editModeEnabled: MutableState<Boolean>,
     selectedObjects: MutableState<Set<LauncherObject>>,
     folderDao: FolderDao? = null,
+    selectionStyle: SelectionStyle = SelectionStyle.CornerBadge,
     canMoveUp: Boolean = false,
     canMoveDown: Boolean = false,
     onMoveUp: (() -> Unit)? = null,
@@ -77,68 +82,92 @@ fun ObjectCell(
     ) {
         Box(
             modifier = Modifier
-                .combinedClickable(onClick = onClick)
-                .fillMaxWidth(),
+                .clickable(onClick = onClick)
+                .fillMaxWidth()
+                .padding(top = 6.dp, end = 6.dp),
             contentAlignment = Alignment.TopCenter,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
-                    modifier = Modifier.size(70.dp),
+                    modifier = Modifier.size(78.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    when (launcherObject) {
-                        is Application -> {
-                            DrawableImage(
-                                modifier = Modifier
-                                    .size(70.dp)
-                                    .clip(RoundedCornerShape(16.dp)),
-                                drawable = launcherObject.getIcon(packageManager),
-                            )
-                        }
-
-                        is Folder -> {
-                            FolderPreviewIcon(
-                                folder = launcherObject,
-                                folderDao = folderDao,
-                                packageManager = packageManager,
-                            )
-                        }
-
-                        is WebsiteShortcut -> {
-                            Box(
-                                modifier = Modifier
-                                    .size(70.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(Green50),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Search,
-                                    contentDescription = null,
-                                    tint = Base0,
-                                    modifier = Modifier.size(32.dp),
+                    Box(
+                        modifier = Modifier.size(70.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        when (launcherObject) {
+                            is Application -> {
+                                DrawableImage(
+                                    modifier = Modifier
+                                        .size(70.dp)
+                                        .clip(RoundedCornerShape(16.dp)),
+                                    drawable = launcherObject.getIcon(packageManager),
                                 )
                             }
-                        }
-                    }
 
-                    if (selected) {
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color(0x331C9961))
-                                .border(2.dp, Green50, RoundedCornerShape(16.dp)),
-                        )
+                            is Folder -> {
+                                FolderPreviewIcon(
+                                    folder = launcherObject,
+                                    folderDao = folderDao,
+                                    packageManager = packageManager,
+                                )
+                            }
+
+                            is WebsiteShortcut -> {
+                                Box(
+                                    modifier = Modifier
+                                        .size(70.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(Green50),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Search,
+                                        contentDescription = null,
+                                        tint = Base0,
+                                        modifier = Modifier.size(32.dp),
+                                    )
+                                }
+                            }
+                        }
+
+                        if (selected && selectionStyle == SelectionStyle.CornerBadge) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Color(0x331C9961))
+                                    .border(2.dp, Green50, RoundedCornerShape(16.dp)),
+                            )
+                        }
                     }
 
                     if (editModeEnabled.value) {
-                        SelectionBadge(
-                            marked = state == ObjectCellState.SelectionMarked,
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .offset(x = 4.dp, y = (-4).dp),
-                        )
+                        when (selectionStyle) {
+                            SelectionStyle.CornerBadge -> {
+                                SelectionBadge(
+                                    marked = state == ObjectCellState.SelectionMarked,
+                                    modifier = Modifier.align(Alignment.TopEnd),
+                                )
+                            }
+
+                            SelectionStyle.Checkbox -> {
+                                Icon(
+                                    imageVector = if (selected) {
+                                        Icons.CheckboxMarked
+                                    } else {
+                                        Icons.CheckboxBlank
+                                    },
+                                    contentDescription = null,
+                                    tint = if (selected) Green50 else Base70,
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(24.dp)
+                                        .background(Base0, CircleShape),
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -159,6 +188,7 @@ fun ObjectCell(
         if (
             editModeEnabled.value &&
             selected &&
+            selectionStyle == SelectionStyle.CornerBadge &&
             onMoveUp != null &&
             onMoveDown != null
         ) {

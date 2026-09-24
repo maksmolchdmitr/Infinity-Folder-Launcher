@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.Image
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.ImageSource
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
@@ -67,7 +69,7 @@ fun ConfirmRemove(
                 onClick = onCancelClick,
             ) {
                 TextBodyS(
-                    text = "Cancel",
+                    text = stringResource(R.string.cancel),
                     color = Base0,
                     fontWeight = FontWeight.Medium,
                 )

@@ -1,20 +1,25 @@
 package maks.molch.dmitr.infinityfolderlauncher.ui.screen
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -24,7 +29,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import maks.molch.dmitr.infinityfolderlauncher.R
@@ -33,6 +39,8 @@ import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
 import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.ClickableIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Input
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.NavBar
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Page
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TextBodyS
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TextH4
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TopBar
@@ -42,10 +50,12 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.ImageSource
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.toImageSource
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Add
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Cancel
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Done
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Right
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base40
+import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base5
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base70
-import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base90
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Green50
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Orange20
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Red50
@@ -55,43 +65,107 @@ fun AddFolder(
     screen: MutableState<Screen>,
     currentFolderId: String,
     folderDao: FolderDao,
+    folderToEdit: Folder? = null,
+    onEditDone: () -> Unit = {},
 ) {
-    val inputText: MutableState<String> = remember { mutableStateOf("") }
-    val selectedNamedIcon: MutableState<Pair<String, ImageSource>?> = remember {
-        mutableStateOf("Default" to R.drawable.infinity_folder_logo.toImageSource())
+    val editing = folderToEdit != null
+    val initialIconName = folderToEdit?.iconName
+    val initialIconPair = remember(folderToEdit?.id) {
+        val name = initialIconName ?: "Default"
+        val source = initialIconName
+            ?.let { Icons.folderIconByName(it) }
+            ?.let { ImageSource.from(it) }
+            ?: R.drawable.infinity_folder_logo.toImageSource()
+        name to (source ?: R.drawable.infinity_folder_logo.toImageSource()!!)
     }
+
+    val inputText: MutableState<String> = remember(folderToEdit?.id) {
+        mutableStateOf(folderToEdit?.name.orEmpty())
+    }
+    val selectedNamedIcon: MutableState<Pair<String, ImageSource>> = remember(folderToEdit?.id) {
+        mutableStateOf(initialIconPair)
+    }
+    val iconPickerExpanded = remember { mutableStateOf(!editing) }
     val epoch by folderDao.epoch.collectAsState()
-    val folderNames = remember(epoch, currentFolderId) {
+    val folderNames = remember(epoch, currentFolderId, folderToEdit?.id) {
         folderDao.getOrCreate(currentFolderId).launcherObjects
             .mapNotNull { it as? Folder }
+            .filter { it.id != folderToEdit?.id }
             .map { it.name }
     }
-    val folderAlreadyExist = inputText.value in folderNames
+    val trimmed = inputText.value.trim()
+    val folderAlreadyExist = trimmed in folderNames
+    val canSave = trimmed.isNotBlank() && !folderAlreadyExist && (
+        !editing ||
+            trimmed != folderToEdit.name ||
+            selectedNamedIcon.value.first != (folderToEdit.iconName ?: "Default")
+        )
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    fun dismiss() {
+        if (editing) onEditDone()
+        screen.value = Screen.Main
+    }
+
+    BackHandler(enabled = iconPickerExpanded.value) {
+        iconPickerExpanded.value = false
+    }
+    BackHandler(enabled = editing) {
+        dismiss()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Base5)
+            .windowInsetsPadding(WindowInsets.safeDrawing),
+    ) {
         TopBar(
-            label = "Add Folder",
+            label = stringResource(
+                if (editing) R.string.edit_folder else R.string.add_folder,
+            ),
+            leftIcon = if (editing) {
+                TopBarIcon(Icons.Cancel) { dismiss() }
+            } else {
+                null
+            },
             secondRightIcon = TopBarIcon(
-                icon = Icons.Add,
-                color = Base70,
-                enabled = inputText.value.isNotBlank() && !folderAlreadyExist,
+                icon = if (editing) Icons.Done else Icons.Add,
+                color = if (editing) Green50 else Base70,
+                enabled = canSave,
             ) {
-                folderDao.createChildFolder(
-                    parentId = currentFolderId,
-                    name = inputText.value,
-                    iconName = selectedNamedIcon.value?.first,
-                )
-                screen.value = Screen.Main
+                val iconName = selectedNamedIcon.value.first.takeIf { it != "Default" }
+                if (editing) {
+                    if (
+                        folderDao.updateFolder(folderToEdit!!.id, trimmed, iconName) ==
+                        FolderDao.RenameResult.Ok
+                    ) {
+                        dismiss()
+                    }
+                } else {
+                    folderDao.createChildFolder(
+                        parentId = currentFolderId,
+                        name = trimmed,
+                        iconName = iconName,
+                    )
+                    screen.value = Screen.Main
+                }
             },
         )
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .weight(1f)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(32.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             FolderInput(inputText, folderAlreadyExist)
-            SelectFolderIcon(selectedNamedIcon, folderAlreadyExist)
+            SelectFolderIcon(
+                namedSelectedIcon = selectedNamedIcon,
+                expanded = iconPickerExpanded,
+                folderAlreadyExist = folderAlreadyExist,
+            )
+        }
+        if (!editing) {
+            NavBar(Page.Folder, screen)
         }
     }
 }
@@ -109,7 +183,7 @@ fun FolderInput(inputText: MutableState<String>, folderAlreadyExist: Boolean) {
             label = {
                 {
                     TextBodyS(
-                        text = "Folder name",
+                        text = stringResource(R.string.folder_name),
                         color = if (inputText.value.isBlank()) Base40 else Green50,
                     )
                 }
@@ -119,79 +193,88 @@ fun FolderInput(inputText: MutableState<String>, folderAlreadyExist: Boolean) {
         if (folderAlreadyExist) {
             TextBodyS(
                 modifier = Modifier.fillMaxWidth(),
-                text = "Folder already created!",
+                text = stringResource(R.string.folder_exists),
                 color = Red50,
             )
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SelectFolderIcon(
-    namedSelectedIcon: MutableState<Pair<String, ImageSource>?>,
+    namedSelectedIcon: MutableState<Pair<String, ImageSource>>,
+    expanded: MutableState<Boolean>,
     folderAlreadyExist: Boolean,
 ) {
     Column(
         modifier = Modifier
             .alpha(if (folderAlreadyExist) 0.3f else 1.0f)
-            .background(color = Orange20, shape = RoundedCornerShape(28.dp))
-            .padding(16.dp)
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(Orange20)
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        namedSelectedIcon.value?.let { namedIcon ->
-            TextH4(
-                modifier = Modifier.fillMaxWidth(),
-                text = "Select Folder Icon",
-                textAlign = TextAlign.Center,
-            )
+        TextH4(
+            modifier = Modifier.fillMaxWidth(),
+            text = stringResource(R.string.select_folder_icon),
+            textAlign = TextAlign.Center,
+        )
+
+        if (!expanded.value) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = !folderAlreadyExist) {
+                        expanded.value = true
+                    },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Image(
-                    modifier = Modifier.size(78.dp),
-                    imageSource = namedIcon.second,
-                )
-                Box(
                     modifier = Modifier
-                        .background(Color.Unspecified)
-                        .clickable {
-                            if (!folderAlreadyExist) {
-                                namedSelectedIcon.value = null
-                            }
-                        },
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        repeat(3) {
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .background(Base90, RoundedCornerShape(100.dp)),
-                            )
-                        }
-                    }
-                }
+                        .size(78.dp)
+                        .clip(RoundedCornerShape(16.dp)),
+                    imageSource = namedSelectedIcon.value.second,
+                )
+                Icon(
+                    imageVector = Icons.Right,
+                    contentDescription = null,
+                    tint = Base70,
+                    modifier = Modifier.size(28.dp),
+                )
             }
-        } ?: run {
+        } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 items(Icons.getAllFolderIconsMap()) { namedImageSource ->
-                    Image(
+                    val selected = namedSelectedIcon.value.first == namedImageSource.first
+                    Box(
                         modifier = Modifier
                             .size(78.dp)
-                            .clickable {
-                                if (!folderAlreadyExist) {
-                                    namedSelectedIcon.value = namedImageSource
-                                }
+                            .clip(RoundedCornerShape(16.dp))
+                            .then(
+                                if (selected) {
+                                    Modifier.border(3.dp, Green50, RoundedCornerShape(16.dp))
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .clickable(enabled = !folderAlreadyExist) {
+                                namedSelectedIcon.value = namedImageSource
+                                expanded.value = false
                             },
-                        imageSource = namedImageSource.second,
-                    )
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Image(
+                            modifier = Modifier.size(78.dp),
+                            imageSource = namedImageSource.second,
+                        )
+                    }
                 }
             }
         }

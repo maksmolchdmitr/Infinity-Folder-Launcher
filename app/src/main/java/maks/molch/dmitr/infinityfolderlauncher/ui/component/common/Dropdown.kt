@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import maks.molch.dmitr.infinityfolderlauncher.R
@@ -51,7 +52,7 @@ fun Dropdown(dropdownItems: List<DropdownItem>) {
                 .background(Color.Unspecified, shape = RoundedCornerShape(12.dp))
                 .padding(16.dp)
                 .fillMaxWidth(),
-            text = "Empty query result!",
+            text = stringResource(R.string.empty_query),
             fontFamily = DefaultFontFamily,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
