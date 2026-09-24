@@ -10,24 +10,28 @@
 
 ---
 
+
+
 ## Контекст: что уже есть в коде
 
 Стек: Kotlin + Jetpack Compose, Home-intent в манифесте, хранение папок в `SharedPreferences` + Gson.
 
-| Есть | Статус |
-|------|--------|
-| Splash → Onboarding → Main | работает |
-| Сетка объектов в папке, long-press edit mode | частично |
-| Добавить папку (имя + иконка) | есть |
-| Добавить приложение (поиск) | есть |
-| Перенос объектов в другую папку | есть |
-| Удаление объектов из папки | есть |
-| Вложенные папки («бесконечные») | идея есть (новая Activity с `FOLDER_NAME`) |
-| Settings | **заглушка** (toast) |
-| Add Widget | **TODO()** |
-| Настройки «кол-во в строке» из описания RuStore | **нет в коде** (хардкод `4`) |
-| Rename папки | **нет** |
-| Reorder (drag) | **нет** |
+
+| Есть                                            | Статус                                     |
+| ----------------------------------------------- | ------------------------------------------ |
+| Splash → Onboarding → Main                      | работает                                   |
+| Сетка объектов в папке, long-press edit mode    | частично                                   |
+| Добавить папку (имя + иконка)                   | есть                                       |
+| Добавить приложение (поиск)                     | есть                                       |
+| Перенос объектов в другую папку                 | есть                                       |
+| Удаление объектов из папки                      | есть                                       |
+| Вложенные папки («бесконечные»)                 | идея есть (новая Activity с `FOLDER_NAME`) |
+| Settings                                        | **заглушка** (toast)                       |
+| Add Widget                                      | **TODO()**                                 |
+| Настройки «кол-во в строке» из описания RuStore | **нет в коде** (хардкод `4`)               |
+| Rename папки                                    | **нет**                                    |
+| Reorder (drag)                                  | **нет**                                    |
+
 
 **Важно для релиза:** в RuStore `applicationId` = `maks.molch.dmitr.makslauncher`, в локальном `build.gradle.kts` = `maks.molch.dmitr.infinityfolderlauncher`. Для обновления существующего приложения id должен совпасть со стором.
 
@@ -48,27 +52,33 @@
 
 ---
 
+
+
 ## Фаза 0 — окружение (без полной Android Studio)
 
-- [x] **0.1** SDK уже был: `~/Library/Android/sdk` (platform-tools, `platforms;android-36`, build-tools 35/36). Сборка без Studio: `./scripts/build-debug.sh` или `./gradlew :app:assembleDebug` + JDK 21. `BUILD SUCCESSFUL`, APK `app/build/outputs/apk/debug/app-debug.apk` (~11 MB). Телефон не был в `adb devices` — install позже.
-- [x] **0.2** Добавлен `.cursorignore` (`.gradle/`, `app/build/`, `.idea/`, …). Root агента в multi-repo не двигали (ошибка Cursor) — работаем по абсолютному пути к проекту.
-- [x] **0.3** Зафиксированы id и версии под обновление существующего приложения в RuStore.
+- [x] **0.1** Поставить только Command-line tools + минимум SDK (`platform-tools`, один `platforms`, один `build-tools`), проверить `./gradlew :app:assembleDebug` с телефона через `adb`.
+- [x] **0.2** Открыть проект в Cursor: workspace root = `InfinityFolderLauncher`, `.cursorignore` на `app/build`, `.gradle`, `.idea` (экономия индекса).
+- [x] **0.3** Зафиксировать целевой `applicationId` / `versionCode` / `versionName` под RuStore (обновление vs новое приложение) — решение в одну строку в этом файле после выбора.
 
-> Решение по id: **обновление RuStore** → `applicationId = maks.molch.dmitr.makslauncher` · старт релиза: **versionName `1.1.0` / versionCode `2`**
+> Решение по id: *[заполнить]* · versionName старта релиза: *[заполнить]*
 
 ---
+
+
 
 ## Фаза 1 — фундамент и стабильность (перед фичами)
 
-- [x] **1.1** `ARCHITECTURE.md` — экраны, DAO, модель, навигация.
-- [x] **1.2** Убраны `println` / debug toast’ы (NavBar, Main Settings stub, Onboarding, FolderSearch).
-- [x] **1.3** Стек папок в Compose (`folderStack` id); одна Activity.
-- [x] **1.4** `FolderDao.epoch: StateFlow` — UI перечитывает папку после мутаций.
-- [x] **1.5** Стабильный `id` у `Folder` / `Application` (у apps = packageName); selection/move по id.
-- [x] **1.6** Schema v1 в `FolderMeta` + миграция name-keyed → id-keyed prefs без потери данных.
-- [x] **1.7** `launchMode=singleTask`, `stateNotNeeded`; back на корне глотается; back из Add* → Main. (Проверка на устройстве — при следующем `adb install`.)
+- [x] **1.1** Инвентаризация: короткий `ARCHITECTURE.md` (экраны, DAO, модель `Folder`/`Application`, навигация) — чтобы агент не блуждал.
+- [x] **1.2** Убрать `println` / debug toast’ы; единый способ логов (или просто вычистить шум).
+- [x] **1.3** Навигация: вместо новой `MainActivity` на каждую папку — стек папок в Compose (`currentPath` / back stack). Один Activity = один лаунчер.
+- [x] **1.4** Реактивность UI: после add/remove/move сетка обновляется без пересоздания Activity (state / Flow из DAO).
+- [x] **1.5** Модель данных: стабильный `id` у объектов (не только `name`), чтобы rename/reorder не ломали ссылки.
+- [x] **1.6** Миграция SharedPreferences → простая схема с версией (или Room), без потери текущих папок пользователя.
+- [x] **1.7** Корректный Home: `launchMode` / back на корне / не уходить «из лаунчера» случайно; проверка на устройстве.
 
 ---
+
+
 
 ## Фаза 2 — запросы из отзыва (must-have для v1.1)
 
@@ -78,6 +88,8 @@
 - [ ] **2.4** Ответ на отзыв в RuStore + скрин в «Что нового» (текст релиза).
 
 ---
+
+
 
 ## Фаза 3 — добить заявленный функционал (описание стора + NavBar)
 
@@ -89,6 +101,8 @@
 
 ---
 
+
+
 ## Фаза 4 — виджеты (из onboarding + Figma)
 
 - [ ] **4.1** Заглушку `Screen.AddWidget` заменить экраном-списком типов: системный виджет / website shortcut.
@@ -96,6 +110,8 @@
 - [ ] **4.3** (Опционально v1.2+) `AppWidgetHost` — настоящие Android-виджеты; отдельно, тяжело.
 
 ---
+
+
 
 ## Фаза 5 — UI ближе к Figma
 
@@ -108,6 +124,8 @@
 
 ---
 
+
+
 ## Фаза 6 — поиск и UX папок
 
 - [ ] **6.1** Глобальный поиск по приложениям/папкам с главного экрана (если есть в Figma search bar).
@@ -116,6 +134,8 @@
 - [ ] **6.4** Пустая папка: понятный empty state + CTA «добавить».
 
 ---
+
+
 
 ## Фаза 7 — качество и релиз
 
@@ -128,6 +148,8 @@
 
 ---
 
+
+
 ## Фаза 8 — бэклог (не блокирует v1.1)
 
 - [ ] Жесты (свайп на поиск / уведомления) — если появятся в Figma.
@@ -139,17 +161,21 @@
 
 ---
 
+
+
 ## Рекомендуемый порядок первых сессий
 
-1. **0.1–0.3** — собрать debug на телефоне  
-2. **1.3–1.5** — навигация + id в модели  
-3. **2.1–2.3** — rename + reorder (закрываем отзыв)  
-4. **3.1–3.2** — settings grid  
-5. **5.x** по кускам UI  
-6. **4.2** website widget  
-7. **7.x** релиз  
+1. **0.1–0.3** — собрать debug на телефоне
+2. **1.3–1.5** — навигация + id в модели
+3. **2.1–2.3** — rename + reorder (закрываем отзыв)
+4. **3.1–3.2** — settings grid
+5. **5.x** по кускам UI
+6. **4.2** website widget
+7. **7.x** релиз
 
 ---
+
+
 
 ## Как пилить с агентом
 
@@ -161,9 +187,12 @@
 
 ---
 
+
+
 ## Ссылки
 
-- Figma: https://www.figma.com/design/hpgrupgalhhqBGUlCttl6m/  
-- RuStore каталог: https://www.rustore.ru/catalog/app/maks.molch.dmitr.makslauncher  
-- Отзывы: https://www.rustore.ru/catalog/app/maks.molch.dmitr.makslauncher/reviews  
-- Console: https://console.rustore.ru/apps/2063541835  
+- Figma: [https://www.figma.com/design/hpgrupgalhhqBGUlCttl6m/](https://www.figma.com/design/hpgrupgalhhqBGUlCttl6m/)  
+- RuStore каталог: [https://www.rustore.ru/catalog/app/maks.molch.dmitr.makslauncher](https://www.rustore.ru/catalog/app/maks.molch.dmitr.makslauncher)  
+- Отзывы: [https://www.rustore.ru/catalog/app/maks.molch.dmitr.makslauncher/reviews](https://www.rustore.ru/catalog/app/maks.molch.dmitr.makslauncher/reviews)  
+- Console: [https://console.rustore.ru/apps/2063541835](https://console.rustore.ru/apps/2063541835)
+

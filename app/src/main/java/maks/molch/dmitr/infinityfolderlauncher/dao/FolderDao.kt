@@ -10,6 +10,7 @@ import maks.molch.dmitr.infinityfolderlauncher.dao.converter.converter
 import maks.molch.dmitr.infinityfolderlauncher.data.Application
 import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
+import maks.molch.dmitr.infinityfolderlauncher.data.WebsiteShortcut
 import maks.molch.dmitr.infinityfolderlauncher.utils.MAIN_FOLDER_ID
 import maks.molch.dmitr.infinityfolderlauncher.utils.MAIN_FOLDER_NAME
 import java.util.UUID
@@ -76,10 +77,13 @@ class FolderDao(context: Context) {
     fun addObjectsAndSave(folderId: String, objects: Set<LauncherObject>) {
         val folder = getOrCreate(folderId)
         val existingIds = folder.launcherObjects.map { it.id }.toSet()
-        val toAdd = objects.filter { it.id !in existingIds }.map { obj ->
+        val toAdd = objects.filter { it.id !in existingIds }.mapNotNull { obj ->
             when (obj) {
-                is Folder -> obj.asReference()
+                is Folder -> {
+                    if (wouldCreateCycle(obj.id, folderId)) null else obj.asReference()
+                }
                 is Application -> obj
+                is WebsiteShortcut -> obj
             }
         }
         if (toAdd.isEmpty()) return
@@ -99,6 +103,112 @@ class FolderDao(context: Context) {
             folder.copy(launcherObjects = folder.launcherObjects.filter { it.id !in ids })
         )
         bump()
+    }
+
+    fun renameFolder(folderId: String, newName: String): RenameResult {
+        if (folderId == MAIN_FOLDER_ID) return RenameResult.Forbidden
+        val trimmed = newName.trim()
+        if (trimmed.isBlank()) return RenameResult.Blank
+        if (trimmed == MAIN_FOLDER_NAME) return RenameResult.Forbidden
+
+        val folder = getById(folderId) ?: return RenameResult.NotFound
+        if (folder.name == trimmed) return RenameResult.Ok
+
+        val siblingConflict = getAll().any { parent ->
+            parent.launcherObjects.any { it.id == folderId } &&
+                parent.launcherObjects.any { child ->
+                    child is Folder && child.id != folderId && child.name == trimmed
+                }
+        }
+        if (siblingConflict) return RenameResult.NameTaken
+
+        saveQuiet(folder.copy(name = trimmed))
+        for (parent in getAll()) {
+            var changed = false
+            val updated = parent.launcherObjects.map { child ->
+                if (child is Folder && child.id == folderId) {
+                    changed = true
+                    child.copy(name = trimmed)
+                } else {
+                    child
+                }
+            }
+            if (changed) {
+                saveQuiet(parent.copy(launcherObjects = updated))
+            }
+        }
+        bump()
+        return RenameResult.Ok
+    }
+
+    fun moveObject(folderId: String, objectId: String, delta: Int) {
+        val folder = getOrCreate(folderId)
+        val list = folder.launcherObjects.toMutableList()
+        val index = list.indexOfFirst { it.id == objectId }
+        if (index < 0) return
+        val newIndex = (index + delta).coerceIn(0, list.lastIndex)
+        if (newIndex == index) return
+        val item = list.removeAt(index)
+        list.add(newIndex, item)
+        save(folder.copy(launcherObjects = list))
+    }
+
+    fun wouldCreateCycle(movingFolderId: String, targetFolderId: String): Boolean {
+        if (movingFolderId == targetFolderId) return true
+        var current: String? = targetFolderId
+        val visited = mutableSetOf<String>()
+        while (current != null && current !in visited) {
+            if (current == movingFolderId) return true
+            visited += current
+            current = findParentId(current)
+        }
+        return false
+    }
+
+    fun findParentId(folderId: String): String? =
+        getAll().firstOrNull { parent ->
+            parent.launcherObjects.any { it is Folder && it.id == folderId }
+        }?.id
+
+    fun collectDescendantFolderIds(folderId: String): Set<String> {
+        val result = mutableSetOf<String>()
+        val queue = ArrayDeque<String>()
+        queue.add(folderId)
+        while (queue.isNotEmpty()) {
+            val id = queue.removeFirst()
+            if (!result.add(id)) continue
+            getById(id)?.launcherObjects?.forEach { child ->
+                if (child is Folder) queue.add(child.id)
+            }
+        }
+        return result
+    }
+
+    fun searchInSubtree(rootId: String, query: String): List<LauncherObject> {
+        val q = query.trim().lowercase()
+        if (q.isEmpty()) return emptyList()
+        val results = mutableListOf<LauncherObject>()
+        val seen = mutableSetOf<String>()
+        for (folderId in collectDescendantFolderIds(rootId)) {
+            val folder = getById(folderId) ?: continue
+            for (obj in folder.launcherObjects) {
+                if (obj.name.lowercase().contains(q) && seen.add(obj.id)) {
+                    results += when (obj) {
+                        is Folder -> getById(obj.id) ?: obj
+                        else -> obj
+                    }
+                }
+            }
+        }
+        return results
+    }
+
+    enum class RenameResult {
+        Ok,
+        Blank,
+        NameTaken,
+        NotFound,
+        Forbidden,
     }
 
     private fun saveQuiet(folder: Folder) {
@@ -184,6 +294,8 @@ class FolderDao(context: Context) {
                         name = child.name,
                         packageName = child.packageName,
                     )
+
+                    is WebsiteShortcut -> child
                 }
             }
             migrated[id] = Folder(

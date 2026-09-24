@@ -33,13 +33,15 @@ fun FolderSearch(
     folderDao: FolderDao,
     selectedFolder: MutableState<Folder?>,
     excludeFolderId: String? = null,
+    excludeFolderIds: Set<String> = emptySet(),
 ) {
     val dropdownOn: MutableState<Boolean> = remember { mutableStateOf(false) }
     val foldersQuery: MutableState<String> = remember { mutableStateOf("") }
     val epoch by folderDao.epoch.collectAsState()
-    val queriedFolders = remember(epoch, foldersQuery.value, excludeFolderId) {
+    val blocked = (excludeFolderIds + setOfNotNull(excludeFolderId)).sorted()
+    val queriedFolders = remember(epoch, foldersQuery.value, blocked) {
         folderDao.getAllByQuery(foldersQuery.value)
-            .filter { it.id != excludeFolderId }
+            .filter { it.id !in blocked }
     }
     Column(
         modifier = Modifier

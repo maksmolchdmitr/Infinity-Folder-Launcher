@@ -2,11 +2,15 @@ package maks.molch.dmitr.infinityfolderlauncher.ui.screen
 
 import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -18,14 +22,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.paint
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.Screen
 import maks.molch.dmitr.infinityfolderlauncher.dao.ApplicationDao
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
+import maks.molch.dmitr.infinityfolderlauncher.dao.SettingsDao
 import maks.molch.dmitr.infinityfolderlauncher.data.Application
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.ObjectCell
@@ -42,6 +45,7 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Add
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Search
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base40
+import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base5
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base70
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Green50
 
@@ -53,8 +57,9 @@ fun AddApplication(
     applicationDao: ApplicationDao,
     currentFolderId: String,
     folderDao: FolderDao,
+    settingsDao: SettingsDao,
 ) {
-    val objectNumberOnTheRow = 4
+    val columns by settingsDao.searchColumns.collectAsState()
     val epoch by folderDao.epoch.collectAsState()
 
     val multipleChoiceEnabled: MutableState<Boolean> = remember { mutableStateOf(false) }
@@ -72,9 +77,14 @@ fun AddApplication(
             }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Base5)
+            .windowInsetsPadding(WindowInsets.safeDrawing),
+    ) {
         TopBar(
-            label = "Add App",
+            label = stringResource(R.string.add_app),
             secondRightIcon = TopBarIcon(
                 icon = Icons.Add,
                 color = Base70,
@@ -93,10 +103,6 @@ fun AddApplication(
                         multipleChoiceEnabled.value = !multipleChoiceEnabled.value
                     },
                     onClick = {},
-                )
-                .paint(
-                    painter = painterResource(R.drawable.infinity_folder_logo),
-                    contentScale = ContentScale.Crop,
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(32.dp),
@@ -111,14 +117,14 @@ fun AddApplication(
                 label = { text ->
                     {
                         TextBodyS(
-                            text = "App name",
+                            text = stringResource(R.string.search_apps_hint),
                             color = if (text.isBlank()) Base40 else Green50,
                         )
                     }
                 },
             )
             LazyVerticalGrid(
-                columns = GridCells.Fixed(objectNumberOnTheRow),
+                columns = GridCells.Fixed(columns),
                 verticalArrangement = Arrangement.spacedBy(32.dp),
                 horizontalArrangement = Arrangement.spacedBy(32.dp),
             ) {

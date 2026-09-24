@@ -29,6 +29,7 @@ fun TopBar(
     leftIcon: TopBarIcon? = null,
     firstRightIcon: TopBarIcon? = null,
     secondRightIcon: TopBarIcon? = null,
+    thirdRightIcon: TopBarIcon? = null,
 ) {
     Row(
         modifier = Modifier
@@ -39,7 +40,6 @@ fun TopBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-
         leftIcon?.let { TopBarIconComposable(it) }
         Text(
             modifier = Modifier.weight(1f),
@@ -50,6 +50,7 @@ fun TopBar(
         )
         firstRightIcon?.let { TopBarIconComposable(it) }
         secondRightIcon?.let { TopBarIconComposable(it) }
+        thirdRightIcon?.let { TopBarIconComposable(it) }
     }
 }
 

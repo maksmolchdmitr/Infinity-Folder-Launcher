@@ -15,9 +15,11 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
 import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
@@ -38,6 +40,12 @@ fun SelectFolder(
     editModeEnabled: MutableState<Boolean>,
 ) {
     val selectedFolder: MutableState<Folder?> = remember { mutableStateOf(null) }
+    val blockedIds = remember(selectedObjects.value) {
+        selectedObjects.value
+            .filterIsInstance<Folder>()
+            .flatMap { folderDao.collectDescendantFolderIds(it.id) }
+            .toSet() + currentFolderId
+    }
 
     Column(
         modifier = Modifier
@@ -48,13 +56,17 @@ fun SelectFolder(
     ) {
         Text(
             modifier = Modifier.fillMaxWidth(),
-            text = "Choose target folder for moving objects",
+            text = stringResource(R.string.choose_target_folder),
             fontFamily = DefaultFontFamily,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             color = Base100,
         )
-        FolderSearch(folderDao, selectedFolder, excludeFolderId = currentFolderId)
+        FolderSearch(
+            folderDao = folderDao,
+            selectedFolder = selectedFolder,
+            excludeFolderIds = blockedIds,
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(31.dp)) {
             IconButton(
                 onClick = {
@@ -66,7 +78,7 @@ fun SelectFolder(
                     .background(color = Base50, shape = RoundedCornerShape(12.dp)),
             ) {
                 Text(
-                    text = "Cancel",
+                    text = stringResource(R.string.cancel),
                     fontFamily = DefaultFontFamily,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
@@ -76,8 +88,13 @@ fun SelectFolder(
             IconButton(
                 onClick = {
                     selectedFolder.value?.let { folder ->
-                        folderDao.addObjectsAndSave(folder.id, selectedObjects.value)
-                        folderDao.removeObjectsAndSave(currentFolderId, selectedObjects.value)
+                        val allowed = selectedObjects.value.filter { obj ->
+                            obj !is Folder || !folderDao.wouldCreateCycle(obj.id, folder.id)
+                        }.toSet()
+                        if (allowed.isNotEmpty()) {
+                            folderDao.addObjectsAndSave(folder.id, allowed)
+                            folderDao.removeObjectsAndSave(currentFolderId, allowed)
+                        }
                         selectedObjects.value = setOf()
                         moveObjectsEnabled.value = false
                         editModeEnabled.value = false
@@ -91,7 +108,7 @@ fun SelectFolder(
                     .weight(1f),
             ) {
                 Text(
-                    text = "Move",
+                    text = stringResource(R.string.move),
                     fontFamily = DefaultFontFamily,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,

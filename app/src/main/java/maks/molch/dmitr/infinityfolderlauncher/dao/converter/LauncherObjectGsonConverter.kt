@@ -13,6 +13,7 @@ import com.google.gson.JsonSerializer
 import maks.molch.dmitr.infinityfolderlauncher.data.Application
 import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
+import maks.molch.dmitr.infinityfolderlauncher.data.WebsiteShortcut
 import java.lang.reflect.Type
 import java.util.UUID
 
@@ -20,6 +21,7 @@ val converter: Gson = GsonBuilder()
     .registerTypeAdapter(LauncherObject::class.java, LauncherObjectTypeAdapter())
     .registerTypeAdapter(Folder::class.java, FolderTypeAdapter())
     .registerTypeAdapter(Application::class.java, ApplicationTypeAdapter())
+    .registerTypeAdapter(WebsiteShortcut::class.java, WebsiteShortcutTypeAdapter())
     .create()
 
 class LauncherObjectTypeAdapter : JsonSerializer<LauncherObject>, JsonDeserializer<LauncherObject> {
@@ -30,6 +32,7 @@ class LauncherObjectTypeAdapter : JsonSerializer<LauncherObject>, JsonDeserializ
     ): JsonElement = when (launcherObject) {
         is Application -> context.serialize(launcherObject, Application::class.java)
         is Folder -> context.serialize(launcherObject, Folder::class.java)
+        is WebsiteShortcut -> context.serialize(launcherObject, WebsiteShortcut::class.java)
     }
 
     override fun deserialize(
@@ -44,6 +47,10 @@ class LauncherObjectTypeAdapter : JsonSerializer<LauncherObject>, JsonDeserializ
 
             Folder::class.java.canonicalName ->
                 context.deserialize(json, Folder::class.java)
+
+            WebsiteShortcut::class.java.canonicalName,
+            "website",
+            -> context.deserialize(json, WebsiteShortcut::class.java)
 
             else -> throw JsonParseException("Unsupported type")
         }
@@ -119,5 +126,31 @@ class ApplicationTypeAdapter : JsonSerializer<Application>, JsonDeserializer<App
         val packageName = json.getAsJsonPrimitive("package_name").asString
         val id = json.get("id")?.takeUnless { it.isJsonNull }?.asString ?: packageName
         return Application(id = id, name = name, packageName = packageName)
+    }
+}
+
+class WebsiteShortcutTypeAdapter : JsonSerializer<WebsiteShortcut>, JsonDeserializer<WebsiteShortcut> {
+    override fun serialize(
+        shortcut: WebsiteShortcut,
+        typeOfSrc: Type,
+        context: JsonSerializationContext,
+    ): JsonElement = JsonObject().apply {
+        addProperty("id", shortcut.id)
+        addProperty("name", shortcut.name)
+        addProperty("url", shortcut.url)
+        addProperty("type", WebsiteShortcut::class.java.canonicalName)
+    }
+
+    override fun deserialize(
+        json: JsonElement,
+        typeOfT: Type,
+        context: JsonDeserializationContext,
+    ): WebsiteShortcut {
+        if (json !is JsonObject) throw JsonParseException("Unsupported type")
+        val name = json.getAsJsonPrimitive("name").asString
+        val url = json.getAsJsonPrimitive("url").asString
+        val id = json.get("id")?.takeUnless { it.isJsonNull }?.asString
+            ?: UUID.randomUUID().toString()
+        return WebsiteShortcut(id = id, name = name, url = url)
     }
 }

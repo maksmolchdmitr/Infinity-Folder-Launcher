@@ -39,5 +39,21 @@ data class Application(
         packageManager.getApplicationIcon(packageName)
 }
 
+data class WebsiteShortcut(
+    override val id: String = UUID.randomUUID().toString(),
+    override val name: String,
+    val url: String,
+) : LauncherObject()
+
 fun Folder.getIcon(): Any = iconName?.let { Icons.folderIconByName(it) }
     ?: R.drawable.infinity_folder_logo
+
+fun normalizeWebsiteUrl(raw: String): String {
+    val trimmed = raw.trim()
+    if (trimmed.isEmpty()) return trimmed
+    return if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+        trimmed
+    } else {
+        "https://$trimmed"
+    }
+}
