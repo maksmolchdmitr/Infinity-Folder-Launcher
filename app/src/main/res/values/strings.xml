@@ -40,4 +40,7 @@
     <string name="onboarding_skip">Пропустить</string>
     <string name="onboarding_lets_go">Поехали</string>
     <string name="empty_query">Ничего не найдено</string>
+    <string name="done">Готово</string>
+    <string name="remove_folder_title">Убрать папку «%1$s»?</string>
+    <string name="remove_folder_desc">Папка исчезнет с экрана. Содержимое внутри не удалится с устройства.</string>
 </resources>

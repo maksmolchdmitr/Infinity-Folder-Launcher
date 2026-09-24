@@ -3,9 +3,11 @@ package maks.molch.dmitr.infinityfolderlauncher.ui.screen
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,16 +19,24 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import maks.molch.dmitr.infinityfolderlauncher.R
@@ -47,16 +57,16 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.NavBar
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Page
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TopBar
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.TopBarIcon
-import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Cancel
-import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Delete
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Done
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Edit
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Left
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Move
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Settings
-import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Red70
-import maks.molch.dmitr.infinityfolderlauncher.ui.theme.WallpaperColor
+import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Green50
+import maks.molch.dmitr.infinityfolderlauncher.ui.theme.WallpaperGradientColors
 import maks.molch.dmitr.infinityfolderlauncher.utils.MAIN_FOLDER_ID
+import kotlin.math.roundToInt
 
 @Composable
 fun MainScreen(
@@ -73,6 +83,8 @@ fun MainScreen(
     val currentFolder = remember(epoch, currentFolderId) {
         folderDao.getOrCreate(currentFolderId)
     }
+    val view = LocalView.current
+    val gridState = rememberLazyGridState()
 
     val editModeEnabled = remember { mutableStateOf(false) }
     val moveObjectsEnabled = remember { mutableStateOf(false) }
@@ -80,6 +92,12 @@ fun MainScreen(
     val appActionEnabled = remember { mutableStateOf(false) }
     val widgetActionEnabled = remember { mutableStateOf(false) }
     val selectedObjects: MutableState<Set<LauncherObject>> = remember { mutableStateOf(setOf()) }
+
+    var draggingId by remember { mutableStateOf<String?>(null) }
+    var dragFromIndex by remember { mutableIntStateOf(-1) }
+    var dragToIndex by remember { mutableIntStateOf(-1) }
+    var dragOffsetX by remember { mutableFloatStateOf(0f) }
+    var dragOffsetY by remember { mutableFloatStateOf(0f) }
 
     val selectedSingleFolder = selectedObjects.value.singleOrNull() as? Folder
     val selectedSingleApp = selectedObjects.value.singleOrNull() as? Application
@@ -90,12 +108,55 @@ fun MainScreen(
     } else {
         currentFolder.name
     }
+    val hasSelection = selectedObjects.value.isNotEmpty()
+
+    fun resetDrag() {
+        draggingId = null
+        dragFromIndex = -1
+        dragToIndex = -1
+        dragOffsetX = 0f
+        dragOffsetY = 0f
+    }
 
     fun exitEditMode() {
         editModeEnabled.value = false
         selectedObjects.value = setOf()
         appActionEnabled.value = false
         widgetActionEnabled.value = false
+        resetDrag()
+    }
+
+    fun finishDrag() {
+        if (
+            dragFromIndex >= 0 &&
+            dragToIndex >= 0 &&
+            dragFromIndex != dragToIndex
+        ) {
+            folderDao.moveObjectToIndex(currentFolderId, dragFromIndex, dragToIndex)
+        }
+        resetDrag()
+    }
+
+    fun targetIndexForDrag(): Int {
+        if (dragFromIndex < 0 || launcherObjects.isEmpty()) return dragFromIndex
+        val cell = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == dragFromIndex }
+            ?: gridState.layoutInfo.visibleItemsInfo.firstOrNull()
+            ?: return dragFromIndex
+        val cellW = cell.size.width.toFloat().coerceAtLeast(1f)
+        val cellH = cell.size.height.toFloat().coerceAtLeast(1f)
+        val colDelta = (dragOffsetX / cellW).roundToInt()
+        val rowDelta = (dragOffsetY / cellH).roundToInt()
+        return (dragFromIndex + rowDelta * columns + colDelta)
+            .coerceIn(0, launcherObjects.lastIndex)
+    }
+
+    fun requestDelete(obj: LauncherObject) {
+        selectedObjects.value = setOf(obj)
+        when (obj) {
+            is Application -> appActionEnabled.value = true
+            is WebsiteShortcut -> widgetActionEnabled.value = true
+            is Folder -> clearObjectsEnabled.value = true
+        }
     }
 
     BackHandler(enabled = appActionEnabled.value || widgetActionEnabled.value) {
@@ -109,7 +170,8 @@ fun MainScreen(
         enabled = editModeEnabled.value &&
             !moveObjectsEnabled.value &&
             !appActionEnabled.value &&
-            !widgetActionEnabled.value,
+            !widgetActionEnabled.value &&
+            draggingId == null,
     ) {
         exitEditMode()
     }
@@ -120,135 +182,159 @@ fun MainScreen(
             appActionEnabled.value ||
             widgetActionEnabled.value
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(WallpaperColor)
+            .background(Brush.linearGradient(WallpaperGradientColors))
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
-        if (!overlayOpen) {
-            if (editModeEnabled.value) {
-                TopBar(
-                    stringResource(R.string.edit_mode),
-                    leftIcon = TopBarIcon(Icons.Cancel) { exitEditMode() },
-                    firstRightIcon = TopBarIcon(
-                        icon = Icons.Edit,
-                        enabled = selectedSingleFolder != null,
-                    ) {
-                        selectedSingleFolder?.let {
-                            onEditFolder(it)
-                            exitEditMode()
-                        }
-                    },
-                    secondRightIcon = TopBarIcon(
-                        icon = Icons.Move,
-                        enabled = selectedObjects.value.isNotEmpty(),
-                    ) { moveObjectsEnabled.value = true },
-                    thirdRightIcon = TopBarIcon(
-                        Icons.Delete,
-                        enabled = selectedObjects.value.isNotEmpty(),
-                        color = Red70,
-                    ) {
-                        when {
-                            selectedSingleApp != null && selectedObjects.value.size == 1 -> {
-                                appActionEnabled.value = true
-                            }
-                            selectedSingleWidget != null && selectedObjects.value.size == 1 -> {
-                                widgetActionEnabled.value = true
-                            }
-                            else -> clearObjectsEnabled.value = true
-                        }
-                    },
-                )
-            } else {
-                TopBar(
-                    label = title,
-                    leftIcon = if (currentFolderId != MAIN_FOLDER_ID) {
-                        TopBarIcon(Icons.Left) {
-                            if (folderStack.size > 1) {
-                                folderStack.removeAt(folderStack.lastIndex)
-                            }
-                        }
-                    } else {
-                        null
-                    },
-                    firstRightIcon = TopBarIcon(Icons.Edit) {
-                        editModeEnabled.value = true
-                    },
-                    secondRightIcon = TopBarIcon(Icons.Settings) {
-                        screen.value = Screen.Settings
-                    },
-                )
-            }
-        }
-
-        Box(modifier = Modifier.weight(1f)) {
-            LazyVerticalGrid(
-                modifier = Modifier.padding(16.dp),
-                columns = GridCells.Fixed(columns),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                itemsIndexed(launcherObjects, key = { _, item -> item.id }) { index, obj ->
-                    ObjectCell(
-                        context = context,
-                        launcherObject = obj,
-                        editModeEnabled = editModeEnabled,
-                        selectedObjects = selectedObjects,
-                        folderDao = folderDao,
-                        canMoveUp = index > 0,
-                        canMoveDown = index < launcherObjects.lastIndex,
-                        onMoveUp = {
-                            folderDao.moveObject(currentFolderId, obj.id, -1)
-                        },
-                        onMoveDown = {
-                            folderDao.moveObject(currentFolderId, obj.id, 1)
-                        },
-                    ) {
-                        if (editModeEnabled.value) {
-                            val state = calcState(selectedObjects, obj)
-                            if (state == ObjectCellState.SelectionBlank) {
-                                selectedObjects.value += obj
-                            } else {
-                                selectedObjects.value =
-                                    selectedObjects.value.filter { it.id != obj.id }.toSet()
-                            }
-                            return@ObjectCell
-                        }
-                        when (obj) {
-                            is Application -> {
-                                context.packageManager
-                                    .getLaunchIntentForPackage(obj.packageName)
-                                    ?.let {
-                                        it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        context.startActivity(it)
-                                    }
-                            }
-
-                            is Folder -> {
-                                if (folderStack.lastOrNull() != obj.id) {
-                                    folderStack.add(obj.id)
+        Column(modifier = Modifier.fillMaxSize()) {
+            if (!overlayOpen) {
+                when {
+                    editModeEnabled.value -> {
+                        TopBar(
+                            label = stringResource(R.string.edit_mode),
+                            leftIcon = if (!hasSelection) {
+                                TopBarIcon(Icons.Settings) {
+                                    screen.value = Screen.Settings
                                 }
-                            }
+                            } else {
+                                null
+                            },
+                            firstRightIcon = if (selectedSingleFolder != null) {
+                                TopBarIcon(Icons.Edit) {
+                                    onEditFolder(selectedSingleFolder)
+                                    exitEditMode()
+                                }
+                            } else {
+                                null
+                            },
+                            secondRightIcon = TopBarIcon(
+                                icon = Icons.Move,
+                                enabled = hasSelection,
+                            ) { moveObjectsEnabled.value = true },
+                            thirdRightIcon = TopBarIcon(
+                                icon = Icons.Done,
+                                color = Green50,
+                            ) { exitEditMode() },
+                        )
+                    }
 
-                            is WebsiteShortcut -> {
-                                runCatching {
-                                    context.startActivity(
-                                        Intent(
-                                            Intent.ACTION_VIEW,
-                                            Uri.parse(obj.url),
-                                        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                                    )
+                    currentFolderId != MAIN_FOLDER_ID -> {
+                        TopBar(
+                            label = title,
+                            leftIcon = TopBarIcon(Icons.Left) {
+                                if (folderStack.size > 1) {
+                                    folderStack.removeAt(folderStack.lastIndex)
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+
+            Box(modifier = Modifier.weight(1f)) {
+                LazyVerticalGrid(
+                    state = gridState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                        .pointerInput(editModeEnabled.value, draggingId, overlayOpen, hasSelection) {
+                            if (overlayOpen || draggingId != null) return@pointerInput
+                            detectTapGestures(
+                                onLongPress = {
+                                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                    if (editModeEnabled.value) {
+                                        if (!hasSelection) exitEditMode()
+                                    } else {
+                                        editModeEnabled.value = true
+                                    }
+                                },
+                            )
+                        },
+                    columns = GridCells.Fixed(columns),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    userScrollEnabled = draggingId == null,
+                ) {
+                    itemsIndexed(launcherObjects, key = { _, item -> item.id }) { index, obj ->
+                        ObjectCell(
+                            context = context,
+                            launcherObject = obj,
+                            editModeEnabled = editModeEnabled,
+                            selectedObjects = selectedObjects,
+                            folderDao = folderDao,
+                            isDragging = draggingId == obj.id,
+                            dragOffset = if (draggingId == obj.id) {
+                                Offset(dragOffsetX, dragOffsetY)
+                            } else {
+                                Offset.Zero
+                            },
+                            dragEnabled = editModeEnabled.value && !overlayOpen,
+                            onDragStart = {
+                                draggingId = obj.id
+                                dragFromIndex = index
+                                dragToIndex = index
+                                dragOffsetX = 0f
+                                dragOffsetY = 0f
+                                selectedObjects.value = setOf(obj)
+                                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                            },
+                            onDrag = { amount ->
+                                dragOffsetX += amount.x
+                                dragOffsetY += amount.y
+                                dragToIndex = targetIndexForDrag()
+                            },
+                            onDragEnd = { finishDrag() },
+                            onDragCancel = { resetDrag() },
+                            onDelete = { requestDelete(obj) },
+                        ) {
+                            if (draggingId != null) return@ObjectCell
+                            if (editModeEnabled.value) {
+                                val state = calcState(selectedObjects, obj)
+                                if (state == ObjectCellState.SelectionBlank) {
+                                    selectedObjects.value += obj
+                                } else {
+                                    selectedObjects.value =
+                                        selectedObjects.value.filter { it.id != obj.id }.toSet()
+                                }
+                                return@ObjectCell
+                            }
+                            when (obj) {
+                                is Application -> {
+                                    context.packageManager
+                                        .getLaunchIntentForPackage(obj.packageName)
+                                        ?.let {
+                                            it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            context.startActivity(it)
+                                        }
+                                }
+
+                                is Folder -> {
+                                    if (folderStack.lastOrNull() != obj.id) {
+                                        folderStack.add(obj.id)
+                                    }
+                                }
+
+                                is WebsiteShortcut -> {
+                                    runCatching {
+                                        context.startActivity(
+                                            Intent(
+                                                Intent.ACTION_VIEW,
+                                                Uri.parse(obj.url),
+                                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
 
-        if (!overlayOpen) {
-            NavBar(Page.Home, screen)
+            if (!overlayOpen && editModeEnabled.value) {
+                NavBar(Page.Home, screen)
+            }
         }
     }
 
@@ -274,13 +360,11 @@ fun MainScreen(
                     folderDao.removeObjectsAndSave(currentFolderId, setOf(app))
                     selectedObjects.value = setOf()
                     appActionEnabled.value = false
-                    editModeEnabled.value = false
                 },
                 onUninstall = {
                     folderDao.removeObjectsAndSave(currentFolderId, setOf(app))
                     selectedObjects.value = setOf()
                     appActionEnabled.value = false
-                    editModeEnabled.value = false
                     runCatching {
                         context.startActivity(
                             Intent(
@@ -306,31 +390,33 @@ fun MainScreen(
                     folderDao.removeObjectsAndSave(currentFolderId, setOf(widget))
                     selectedObjects.value = setOf()
                     widgetActionEnabled.value = false
-                    editModeEnabled.value = false
                 },
             )
         }
     }
 
     if (clearObjectsEnabled.value) {
+        val singleFolder = selectedObjects.value.singleOrNull() as? Folder
         Overlay(onDismiss = { clearObjectsEnabled.value = false }) {
             ConfirmRemove(
-                mainText = stringResource(
-                    R.string.clear_selected,
-                    selectedObjects.value.size,
-                ),
-                descriptionText = stringResource(R.string.clear_selected_desc),
+                mainText = if (singleFolder != null) {
+                    stringResource(R.string.remove_folder_title, singleFolder.name)
+                } else {
+                    stringResource(R.string.clear_selected, selectedObjects.value.size)
+                },
+                descriptionText = if (singleFolder != null) {
+                    stringResource(R.string.remove_folder_desc)
+                } else {
+                    stringResource(R.string.clear_selected_desc)
+                },
                 removeText = stringResource(R.string.clear),
                 onCancelClick = {
-                    selectedObjects.value = setOf()
                     clearObjectsEnabled.value = false
-                    editModeEnabled.value = false
                 },
                 onRemoveClick = {
                     folderDao.removeObjectsAndSave(currentFolderId, selectedObjects.value)
                     selectedObjects.value = setOf()
                     clearObjectsEnabled.value = false
-                    editModeEnabled.value = false
                 },
             )
         }

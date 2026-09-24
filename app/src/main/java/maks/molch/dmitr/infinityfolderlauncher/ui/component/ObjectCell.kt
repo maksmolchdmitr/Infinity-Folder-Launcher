@@ -5,6 +5,8 @@ import android.content.pm.PackageManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,12 +25,16 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
 import maks.molch.dmitr.infinityfolderlauncher.data.Application
@@ -38,6 +44,7 @@ import maks.molch.dmitr.infinityfolderlauncher.data.WebsiteShortcut
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.DrawableImage
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.Image
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.ImageSource
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Cancel
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.CheckboxBlank
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.CheckboxMarked
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
@@ -47,6 +54,7 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base10
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base40
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base70
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Green50
+import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Red70
 
 enum class SelectionStyle {
     CornerBadge,
@@ -61,10 +69,14 @@ fun ObjectCell(
     selectedObjects: MutableState<Set<LauncherObject>>,
     folderDao: FolderDao? = null,
     selectionStyle: SelectionStyle = SelectionStyle.CornerBadge,
-    canMoveUp: Boolean = false,
-    canMoveDown: Boolean = false,
-    onMoveUp: (() -> Unit)? = null,
-    onMoveDown: (() -> Unit)? = null,
+    isDragging: Boolean = false,
+    dragOffset: Offset = Offset.Zero,
+    dragEnabled: Boolean = false,
+    onDragStart: () -> Unit = {},
+    onDrag: (Offset) -> Unit = {},
+    onDragEnd: () -> Unit = {},
+    onDragCancel: () -> Unit = {},
+    onDelete: (() -> Unit)? = null,
     onClick: () -> Unit = {},
 ) {
     val packageManager: PackageManager = context.packageManager
@@ -77,129 +89,150 @@ fun ObjectCell(
     }
 
     Column(
+        modifier = Modifier
+            .zIndex(if (isDragging) 1f else 0f)
+            .graphicsLayer {
+                if (isDragging) {
+                    translationX = dragOffset.x
+                    translationY = dragOffset.y
+                    scaleX = 1.08f
+                    scaleY = 1.08f
+                    alpha = 0.92f
+                    shadowElevation = 12f
+                }
+            }
+            .pointerInput(launcherObject.id) {
+                detectTapGestures(onTap = { onClick() })
+            }
+            .pointerInput(dragEnabled, launcherObject.id) {
+                if (!dragEnabled) return@pointerInput
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { onDragStart() },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        onDrag(dragAmount)
+                    },
+                    onDragEnd = onDragEnd,
+                    onDragCancel = onDragCancel,
+                )
+            }
+            .fillMaxWidth()
+            .padding(top = 6.dp, end = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Box(
-            modifier = Modifier
-                .clickable(onClick = onClick)
-                .fillMaxWidth()
-                .padding(top = 6.dp, end = 6.dp),
-            contentAlignment = Alignment.TopCenter,
+            modifier = Modifier.size(78.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier.size(78.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        modifier = Modifier.size(70.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        when (launcherObject) {
-                            is Application -> {
-                                DrawableImage(
-                                    modifier = Modifier
-                                        .size(70.dp)
-                                        .clip(RoundedCornerShape(16.dp)),
-                                    drawable = launcherObject.getIcon(packageManager),
-                                )
-                            }
-
-                            is Folder -> {
-                                FolderPreviewIcon(
-                                    folder = launcherObject,
-                                    folderDao = folderDao,
-                                    packageManager = packageManager,
-                                )
-                            }
-
-                            is WebsiteShortcut -> {
-                                Box(
-                                    modifier = Modifier
-                                        .size(70.dp)
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(Green50),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Search,
-                                        contentDescription = null,
-                                        tint = Base0,
-                                        modifier = Modifier.size(32.dp),
-                                    )
-                                }
-                            }
-                        }
-
-                        if (selected && selectionStyle == SelectionStyle.CornerBadge) {
-                            Box(
-                                modifier = Modifier
-                                    .matchParentSize()
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(Color(0x331C9961))
-                                    .border(2.dp, Green50, RoundedCornerShape(16.dp)),
-                            )
-                        }
+            Box(
+                modifier = Modifier.size(70.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                when (launcherObject) {
+                    is Application -> {
+                        DrawableImage(
+                            modifier = Modifier
+                                .size(70.dp)
+                                .clip(RoundedCornerShape(16.dp)),
+                            drawable = launcherObject.getIcon(packageManager),
+                        )
                     }
 
-                    if (editModeEnabled.value) {
-                        when (selectionStyle) {
-                            SelectionStyle.CornerBadge -> {
-                                SelectionBadge(
-                                    marked = state == ObjectCellState.SelectionMarked,
-                                    modifier = Modifier.align(Alignment.TopEnd),
-                                )
-                            }
+                    is Folder -> {
+                        FolderPreviewIcon(
+                            folder = launcherObject,
+                            folderDao = folderDao,
+                            packageManager = packageManager,
+                        )
+                    }
 
-                            SelectionStyle.Checkbox -> {
-                                Icon(
-                                    imageVector = if (selected) {
-                                        Icons.CheckboxMarked
-                                    } else {
-                                        Icons.CheckboxBlank
-                                    },
-                                    contentDescription = null,
-                                    tint = if (selected) Green50 else Base70,
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .size(24.dp)
-                                        .background(Base0, CircleShape),
-                                )
-                            }
+                    is WebsiteShortcut -> {
+                        Box(
+                            modifier = Modifier
+                                .size(70.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Green50),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Search,
+                                contentDescription = null,
+                                tint = Base0,
+                                modifier = Modifier.size(32.dp),
+                            )
                         }
                     }
                 }
 
-                Text(
-                    modifier = Modifier
-                        .height(28.dp)
-                        .padding(horizontal = 2.dp),
-                    text = launcherObject.name,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (selected && selectionStyle == SelectionStyle.CornerBadge) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0x331C9961))
+                            .border(2.dp, Green50, RoundedCornerShape(16.dp)),
+                    )
+                }
+            }
+
+            if (editModeEnabled.value) {
+                when (selectionStyle) {
+                    SelectionStyle.CornerBadge -> {
+                        if (onDelete != null) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .size(22.dp)
+                                    .clip(CircleShape)
+                                    .background(Red70)
+                                    .clickable { onDelete.invoke() },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Cancel,
+                                    contentDescription = null,
+                                    tint = Base0,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                            }
+                        }
+                        SelectionBadge(
+                            marked = state == ObjectCellState.SelectionMarked,
+                            modifier = Modifier.align(Alignment.TopEnd),
+                        )
+                    }
+
+                    SelectionStyle.Checkbox -> {
+                        Icon(
+                            imageVector = if (selected) {
+                                Icons.CheckboxMarked
+                            } else {
+                                Icons.CheckboxBlank
+                            },
+                            contentDescription = null,
+                            tint = if (selected) Green50 else Base70,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(24.dp)
+                                .background(Base0, CircleShape),
+                        )
+                    }
+                }
             }
         }
 
-        if (
-            editModeEnabled.value &&
-            selected &&
-            selectionStyle == SelectionStyle.CornerBadge &&
-            onMoveUp != null &&
-            onMoveDown != null
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                ReorderChip(label = "↑", enabled = canMoveUp, onClick = onMoveUp)
-                ReorderChip(label = "↓", enabled = canMoveDown, onClick = onMoveDown)
-            }
-        }
+        Text(
+            modifier = Modifier
+                .height(28.dp)
+                .padding(horizontal = 2.dp),
+            text = launcherObject.name,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -305,25 +338,6 @@ private fun MiniChildIcon(child: LauncherObject, packageManager: PackageManager)
                     .background(Green50),
             )
         }
-    }
-}
-
-@Composable
-private fun ReorderChip(label: String, enabled: Boolean, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(28.dp)
-            .clip(CircleShape)
-            .background(if (enabled) Green50 else Base10)
-            .clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label,
-            color = if (enabled) Base0 else Base40,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-        )
     }
 }
 

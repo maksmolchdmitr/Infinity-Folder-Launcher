@@ -161,9 +161,24 @@ class FolderDao(context: Context) {
         if (index < 0) return
         val newIndex = (index + delta).coerceIn(0, list.lastIndex)
         if (newIndex == index) return
-        val item = list.removeAt(index)
-        list.add(newIndex, item)
+        moveObjectToIndex(folderId, index, newIndex)
+    }
+
+    fun moveObjectToIndex(folderId: String, fromIndex: Int, toIndex: Int) {
+        val folder = getOrCreate(folderId)
+        val list = folder.launcherObjects.toMutableList()
+        if (fromIndex !in list.indices || toIndex !in list.indices || fromIndex == toIndex) {
+            return
+        }
+        val item = list.removeAt(fromIndex)
+        list.add(toIndex, item)
         save(folder.copy(launcherObjects = list))
+    }
+
+    fun setLauncherObjects(folderId: String, objects: List<LauncherObject>) {
+        val folder = getOrCreate(folderId)
+        if (folder.launcherObjects == objects) return
+        save(folder.copy(launcherObjects = objects))
     }
 
     fun wouldCreateCycle(movingFolderId: String, targetFolderId: String): Boolean {

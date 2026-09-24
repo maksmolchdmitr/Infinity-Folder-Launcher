@@ -27,3 +27,9 @@ fun InfinityFolderLauncherTheme(content: @Composable () -> Unit) {
 }
 
 val WallpaperColor = Color(0xFFE8F5EF)
+
+val WallpaperGradientColors = listOf(
+    Color(0xFF5B4B8A),
+    Color(0xFF2A9D8F),
+    Color(0xFFE76F9B),
+)
