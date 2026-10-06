@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- Xiaomi / HyperOS system pedometer history (same source as default launcher widget) -->
+    <uses-permission android:name="miui.permission.READ_STEPS" />
+
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
@@ -17,9 +22,13 @@
         android:theme="@style/Theme.InfinityFolderLauncher">
         <activity
             android:name=".MainActivity"
+            android:clearTaskOnLaunch="true"
+            android:excludeFromRecents="true"
             android:exported="true"
             android:launchMode="singleTask"
+            android:resumeWhilePausing="true"
             android:stateNotNeeded="true"
+            android:taskAffinity=""
             android:theme="@style/Theme.InfinityFolderLauncher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

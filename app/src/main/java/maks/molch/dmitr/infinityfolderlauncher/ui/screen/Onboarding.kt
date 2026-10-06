@@ -216,6 +216,6 @@ private fun finish(
     screen: MutableState<Screen>,
     onboardingDao: OnboardingDao
 ) {
-    screen.value = Screen.Main
     onboardingDao.setOnboardingCompleted()
+    screen.value = Screen.Login
 }

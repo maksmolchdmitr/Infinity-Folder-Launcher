@@ -13,6 +13,9 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.custom.folder.Social
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.folder.Work
 
 object Icons {
+    const val FOLDER_ICON_DEFAULT = "Default"
+    const val FOLDER_ICON_APPS_PREVIEW = "AppsPreview"
+
     private val IconsMap: Map<String, ImageVector> = mapOf(
         "Education" to Icons.Education,
         "Finance" to Icons.Finance,
@@ -24,12 +27,16 @@ object Icons {
         "Work" to Icons.Work,
     )
 
-    fun folderIconByName(name: String): ImageVector? = IconsMap[name]
+    fun folderIconByName(name: String): ImageVector? = when (name) {
+        FOLDER_ICON_APPS_PREVIEW -> Icons.FolderMultiple
+        else -> IconsMap[name]
+    }
 
     fun getAllFolderIconsMap(): List<Pair<String, ImageSource>> =
-        (listOf("Default" to R.drawable.infinity_folder_logo) +
-                IconsMap.entries.map { it.key to it.value })
-            .mapNotNull { pair ->
-                ImageSource.from(pair.second)?.let { pair.first to it }
-            }
+        listOfNotNull(
+            ImageSource.from(R.drawable.infinity_folder_logo)?.let { FOLDER_ICON_DEFAULT to it },
+            ImageSource.from(Icons.FolderMultiple)?.let { FOLDER_ICON_APPS_PREVIEW to it },
+        ) + IconsMap.entries.mapNotNull { (name, vector) ->
+            ImageSource.from(vector)?.let { name to it }
+        }
 }

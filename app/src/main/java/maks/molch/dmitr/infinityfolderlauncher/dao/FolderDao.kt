@@ -7,15 +7,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import maks.molch.dmitr.infinityfolderlauncher.dao.converter.converter
+import maks.molch.dmitr.infinityfolderlauncher.data.AppWidgetItem
 import maks.molch.dmitr.infinityfolderlauncher.data.Application
 import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.data.LauncherObject
+import maks.molch.dmitr.infinityfolderlauncher.data.StepsWidget
 import maks.molch.dmitr.infinityfolderlauncher.data.WebsiteShortcut
 import maks.molch.dmitr.infinityfolderlauncher.utils.MAIN_FOLDER_ID
 import maks.molch.dmitr.infinityfolderlauncher.utils.MAIN_FOLDER_NAME
 import java.util.UUID
 
-class FolderDao(context: Context) {
+class FolderDao(
+    context: Context,
+    private val backgroundStore: FolderBackgroundStore = FolderBackgroundStore(context),
+) {
     private val folderPrefs: SharedPreferences =
         context.getSharedPreferences(PREFS_FOLDERS, Context.MODE_PRIVATE)
     private val metaPrefs: SharedPreferences =
@@ -59,11 +64,25 @@ class FolderDao(context: Context) {
         return folder
     }
 
-    fun createChildFolder(parentId: String, name: String, iconName: String?): Folder {
+    fun createChildFolder(
+        parentId: String,
+        name: String,
+        iconName: String?,
+        backgroundName: String? = null,
+        backgroundImages: List<String> = emptyList(),
+        backgroundRotateSeconds: Int? = null,
+        requireDistinctObjects: Boolean = true,
+        deleteContentsOnRemove: Boolean = true,
+    ): Folder {
         val child = Folder(
             id = UUID.randomUUID().toString(),
             name = name,
             iconName = iconName,
+            backgroundName = backgroundName,
+            backgroundImages = backgroundImages,
+            backgroundRotateSeconds = backgroundRotateSeconds,
+            requireDistinctObjects = requireDistinctObjects,
+            deleteContentsOnRemove = deleteContentsOnRemove,
         )
         saveQuiet(child)
         val parent = getOrCreate(parentId)
@@ -77,13 +96,26 @@ class FolderDao(context: Context) {
     fun addObjectsAndSave(folderId: String, objects: Set<LauncherObject>) {
         val folder = getOrCreate(folderId)
         val existingIds = folder.launcherObjects.map { it.id }.toSet()
-        val toAdd = objects.filter { it.id !in existingIds }.mapNotNull { obj ->
+        val candidates = if (folder.requireDistinctObjects) {
+            objects.filter { it.id !in existingIds }
+        } else {
+            objects.toList()
+        }
+        val toAdd = candidates.mapNotNull { obj ->
             when (obj) {
                 is Folder -> {
                     if (wouldCreateCycle(obj.id, folderId)) null else obj.asReference()
                 }
                 is Application -> obj
                 is WebsiteShortcut -> obj
+                is AppWidgetItem -> obj
+                is StepsWidget -> obj
+            }
+        }.let { list ->
+            if (folder.requireDistinctObjects) {
+                list.distinctBy { it.id }.filter { it.id !in existingIds }
+            } else {
+                list
             }
         }
         if (toAdd.isEmpty()) return
@@ -98,6 +130,14 @@ class FolderDao(context: Context) {
 
     fun removeObjectsAndSave(folderId: String, objects: Set<LauncherObject>) {
         val ids = objects.map { it.id }.toSet()
+        for (obj in objects) {
+            if (obj is Folder) {
+                val full = getById(obj.id) ?: obj
+                if (full.deleteContentsOnRemove) {
+                    deleteFolderTree(obj.id)
+                }
+            }
+        }
         val folder = getOrCreate(folderId)
         saveQuiet(
             folder.copy(launcherObjects = folder.launcherObjects.filter { it.id !in ids })
@@ -106,13 +146,28 @@ class FolderDao(context: Context) {
     }
 
     fun renameFolder(folderId: String, newName: String): RenameResult =
-        updateFolder(folderId, newName, iconName = null, keepIcon = true)
+        updateFolder(
+            folderId = folderId,
+            newName = newName,
+            iconName = null,
+            keepIcon = true,
+            backgroundName = null,
+            backgroundImages = emptyList(),
+            backgroundRotateSeconds = null,
+            keepBackground = true,
+        )
 
     fun updateFolder(
         folderId: String,
         newName: String,
         iconName: String?,
         keepIcon: Boolean = false,
+        backgroundName: String? = null,
+        backgroundImages: List<String> = emptyList(),
+        backgroundRotateSeconds: Int? = null,
+        keepBackground: Boolean = false,
+        requireDistinctObjects: Boolean? = null,
+        deleteContentsOnRemove: Boolean? = null,
     ): RenameResult {
         if (folderId == MAIN_FOLDER_ID) return RenameResult.Forbidden
         val trimmed = newName.trim()
@@ -121,9 +176,25 @@ class FolderDao(context: Context) {
 
         val folder = getById(folderId) ?: return RenameResult.NotFound
         val nextIcon = if (keepIcon) folder.iconName else iconName
+        val nextBackground = if (keepBackground) folder.backgroundName else backgroundName
+        val nextBackgroundImages =
+            if (keepBackground) folder.backgroundImages else backgroundImages
+        val nextRotate =
+            if (keepBackground) folder.backgroundRotateSeconds else backgroundRotateSeconds
+        val nextDistinct = requireDistinctObjects ?: folder.requireDistinctObjects
+        val nextDeleteContents = deleteContentsOnRemove ?: folder.deleteContentsOnRemove
         val nameUnchanged = folder.name == trimmed
         val iconUnchanged = folder.iconName == nextIcon
-        if (nameUnchanged && iconUnchanged) return RenameResult.Ok
+        val backgroundUnchanged =
+            folder.backgroundName == nextBackground &&
+                folder.backgroundImages == nextBackgroundImages &&
+                folder.backgroundRotateSeconds == nextRotate
+        val flagsUnchanged =
+            folder.requireDistinctObjects == nextDistinct &&
+                folder.deleteContentsOnRemove == nextDeleteContents
+        if (nameUnchanged && iconUnchanged && backgroundUnchanged && flagsUnchanged) {
+            return RenameResult.Ok
+        }
 
         if (!nameUnchanged) {
             val siblingConflict = getAll().any { parent ->
@@ -135,13 +206,32 @@ class FolderDao(context: Context) {
             if (siblingConflict) return RenameResult.NameTaken
         }
 
-        saveQuiet(folder.copy(name = trimmed, iconName = nextIcon))
+        val oldImages = folder.backgroundImages
+        saveQuiet(
+            folder.copy(
+                name = trimmed,
+                iconName = nextIcon,
+                backgroundName = nextBackground,
+                backgroundImages = nextBackgroundImages,
+                backgroundRotateSeconds = nextRotate,
+                requireDistinctObjects = nextDistinct,
+                deleteContentsOnRemove = nextDeleteContents,
+            ),
+        )
         for (parent in getAll()) {
             var changed = false
             val updated = parent.launcherObjects.map { child ->
                 if (child is Folder && child.id == folderId) {
                     changed = true
-                    child.copy(name = trimmed, iconName = nextIcon)
+                    child.copy(
+                        name = trimmed,
+                        iconName = nextIcon,
+                        backgroundName = nextBackground,
+                        backgroundImages = nextBackgroundImages,
+                        backgroundRotateSeconds = nextRotate,
+                        requireDistinctObjects = nextDistinct,
+                        deleteContentsOnRemove = nextDeleteContents,
+                    )
                 } else {
                     child
                 }
@@ -150,6 +240,7 @@ class FolderDao(context: Context) {
                 saveQuiet(parent.copy(launcherObjects = updated))
             }
         }
+        backgroundStore.deleteAll(oldImages.filter { it !in nextBackgroundImages })
         bump()
         return RenameResult.Ok
     }
@@ -167,11 +258,12 @@ class FolderDao(context: Context) {
     fun moveObjectToIndex(folderId: String, fromIndex: Int, toIndex: Int) {
         val folder = getOrCreate(folderId)
         val list = folder.launcherObjects.toMutableList()
-        if (fromIndex !in list.indices || toIndex !in list.indices || fromIndex == toIndex) {
+        if (fromIndex !in list.indices || fromIndex == toIndex) {
             return
         }
         val item = list.removeAt(fromIndex)
-        list.add(toIndex, item)
+        // [toIndex] = desired index in the list *after* removal.
+        list.add(toIndex.coerceIn(0, list.size), item)
         save(folder.copy(launcherObjects = list))
     }
 
@@ -210,6 +302,25 @@ class FolderDao(context: Context) {
             }
         }
         return result
+    }
+
+    private fun deleteFolderTree(folderId: String) {
+        val ids = collectDescendantFolderIds(folderId)
+        for (id in ids) {
+            if (id == MAIN_FOLDER_ID) continue
+            backgroundStore.deleteAll(getById(id)?.backgroundImages.orEmpty())
+        }
+        for (parent in getAll()) {
+            val filtered = parent.launcherObjects.filter { it.id !in ids }
+            if (filtered.size != parent.launcherObjects.size) {
+                saveQuiet(parent.copy(launcherObjects = filtered))
+            }
+        }
+        folderPrefs.edit {
+            for (id in ids) {
+                if (id != MAIN_FOLDER_ID) remove(id)
+            }
+        }
     }
 
     fun searchInSubtree(rootId: String, query: String): List<LauncherObject> {
@@ -314,6 +425,9 @@ class FolderDao(context: Context) {
                             id = childId,
                             name = child.name,
                             iconName = child.iconName,
+                            backgroundName = child.backgroundName,
+                            backgroundImages = child.backgroundImages,
+                            backgroundRotateSeconds = child.backgroundRotateSeconds,
                         )
                     }
 
@@ -324,6 +438,8 @@ class FolderDao(context: Context) {
                     )
 
                     is WebsiteShortcut -> child
+                    is AppWidgetItem -> child
+                    is StepsWidget -> child
                 }
             }
             migrated[id] = Folder(
@@ -331,6 +447,9 @@ class FolderDao(context: Context) {
                 name = if (id == MAIN_FOLDER_ID) MAIN_FOLDER_NAME else folder.name,
                 launcherObjects = children,
                 iconName = folder.iconName,
+                backgroundName = folder.backgroundName,
+                backgroundImages = folder.backgroundImages,
+                backgroundRotateSeconds = folder.backgroundRotateSeconds,
             )
         }
 

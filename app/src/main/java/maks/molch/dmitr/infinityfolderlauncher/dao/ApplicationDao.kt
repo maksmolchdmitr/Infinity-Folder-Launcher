@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -76,11 +77,8 @@ class ApplicationDao(context: Context) {
     private fun upsertPackage(packageName: String) {
         scope.launch {
             mutex.withLock {
-                val app = loadLaunchableApp(packageName) ?: run {
-                    _apps.value = _apps.value.filter { it.packageName != packageName }
-                    return@withLock
-                }
-                _apps.value = (_apps.value.filter { it.packageName != packageName } + app)
+                val fresh = loadLaunchableApps(packageName)
+                _apps.value = (_apps.value.filter { it.packageName != packageName } + fresh)
                     .sortedBy { it.name.lowercase() }
             }
         }
@@ -94,36 +92,39 @@ class ApplicationDao(context: Context) {
         }
     }
 
-    private fun loadLaunchableApps(): List<Application> {
+    private fun loadLaunchableApps(packageName: String? = null): List<Application> {
         val packageManager = appContext.packageManager
         val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        if (packageName != null) launcherIntent.setPackage(packageName)
         return packageManager.queryIntentActivities(launcherIntent, PackageManager.MATCH_ALL)
-            .mapNotNull { resolveInfo ->
-                val packageName = resolveInfo.activityInfo?.packageName ?: return@mapNotNull null
-                Application(
-                    id = packageName,
-                    name = resolveInfo.loadLabel(packageManager).toString(),
-                    packageName = packageName,
-                )
+            .groupBy { it.activityInfo?.packageName }
+            .flatMap { (pkg, infos) ->
+                if (pkg.isNullOrBlank()) emptyList()
+                else activitiesInPackage(packageManager, pkg, infos)
             }
-            .distinctBy { it.packageName }
             .sortedBy { it.name.lowercase() }
     }
 
-    private fun loadLaunchableApp(packageName: String): Application? {
-        val packageManager = appContext.packageManager
-        val launcherIntent = Intent(Intent.ACTION_MAIN)
-            .addCategory(Intent.CATEGORY_LAUNCHER)
-            .setPackage(packageName)
-        val resolveInfo = packageManager.queryIntentActivities(
-            launcherIntent,
-            PackageManager.MATCH_ALL,
-        ).firstOrNull() ?: return null
-        return Application(
-            id = packageName,
-            name = resolveInfo.loadLabel(packageManager).toString(),
-            packageName = packageName,
-        )
+    /**
+     * One package can expose several launcher activities (on Xiaomi, contacts and
+     * the phone keypad are both com.android.contacts). The first keeps the package
+     * name as id so icons already on the home screen still match.
+     */
+    private fun activitiesInPackage(
+        packageManager: PackageManager,
+        packageName: String,
+        infos: List<ResolveInfo>,
+    ): List<Application> {
+        val unique = infos.distinctBy { it.activityInfo?.name }
+        return unique.mapIndexedNotNull { index, resolveInfo ->
+            val className = resolveInfo.activityInfo?.name ?: return@mapIndexedNotNull null
+            Application(
+                id = if (index == 0) packageName else "$packageName/$className",
+                name = resolveInfo.loadLabel(packageManager).toString().ifBlank { className },
+                packageName = packageName,
+                activityName = className,
+            )
+        }
     }
 
     private fun registerPackageReceiver() {

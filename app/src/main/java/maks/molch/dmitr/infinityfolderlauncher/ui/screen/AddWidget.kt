@@ -1,5 +1,11 @@
 package maks.molch.dmitr.infinityfolderlauncher.ui.screen
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,14 +23,18 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import maks.molch.dmitr.infinityfolderlauncher.InfinityFolderApp
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.Screen
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
 import maks.molch.dmitr.infinityfolderlauncher.data.Folder
+import maks.molch.dmitr.infinityfolderlauncher.data.StepsWidget
 import maks.molch.dmitr.infinityfolderlauncher.data.WebsiteShortcut
 import maks.molch.dmitr.infinityfolderlauncher.data.normalizeWebsiteUrl
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.FolderSearch
@@ -52,8 +62,55 @@ fun AddWidgetScreen(
     screen: MutableState<Screen>,
     currentFolderId: String,
     folderDao: FolderDao,
+    onPickSystemWidget: () -> Unit = {},
 ) {
-    val mode = remember { mutableStateOf<WidgetMode>(WidgetMode.Chooser) }
+    val mode = remember { mutableStateOf(WidgetMode.Chooser) }
+    val context = LocalContext.current
+    val app = context.applicationContext as InfinityFolderApp
+
+    fun addStepsWidget() {
+        folderDao.addObjectsAndSave(
+            currentFolderId,
+            setOf(StepsWidget(name = context.getString(R.string.steps_widget))),
+        )
+        app.stepsDao.start()
+        screen.value = Screen.Main
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        app.stepsDao.start()
+        if (!granted) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.steps_permission_needed),
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+        screen.value = Screen.Main
+    }
+
+    fun requestStepsWidget() {
+        // Persist first, then ask permission while still on this screen
+        // so the ActivityResult launcher stays registered.
+        folderDao.addObjectsAndSave(
+            currentFolderId,
+            setOf(StepsWidget(name = context.getString(R.string.steps_widget))),
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val granted = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACTIVITY_RECOGNITION,
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+                return
+            }
+        }
+        app.stepsDao.start()
+        screen.value = Screen.Main
+    }
 
     when (mode.value) {
         WidgetMode.Chooser -> Column(
@@ -75,15 +132,19 @@ fun AddWidgetScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 WidgetOptionCard(
+                    title = stringResource(R.string.steps_widget),
+                    subtitle = stringResource(R.string.steps_widget_hint),
+                    onClick = { requestStepsWidget() },
+                )
+                WidgetOptionCard(
                     title = stringResource(R.string.website_shortcut),
                     subtitle = stringResource(R.string.website_shortcut_hint),
                     onClick = { mode.value = WidgetMode.Website },
                 )
                 WidgetOptionCard(
-                    title = stringResource(R.string.system_widgets_soon),
-                    subtitle = null,
-                    enabled = false,
-                    onClick = {},
+                    title = stringResource(R.string.system_widgets),
+                    subtitle = stringResource(R.string.system_widgets_hint),
+                    onClick = onPickSystemWidget,
                 )
             }
             NavBar(Page.Widget, screen)

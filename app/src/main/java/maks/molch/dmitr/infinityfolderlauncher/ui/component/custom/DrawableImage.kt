@@ -1,7 +1,7 @@
 package maks.molch.dmitr.infinityfolderlauncher.ui.component.custom
 
 import android.graphics.drawable.Drawable
-import androidx.appcompat.widget.AppCompatImageView
+import android.widget.ImageView
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
@@ -11,12 +11,13 @@ fun DrawableImage(modifier: Modifier, drawable: Drawable) {
     AndroidView(
         modifier = modifier,
         factory = { context ->
-            AppCompatImageView(context).apply {
+            ImageView(context).apply {
+                scaleType = ImageView.ScaleType.FIT_CENTER
                 setImageDrawable(drawable)
             }
         },
         update = { imageView ->
             imageView.setImageDrawable(drawable)
-        }
+        },
     )
 }

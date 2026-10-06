@@ -18,7 +18,9 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -30,13 +32,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import maks.molch.dmitr.infinityfolderlauncher.InfinityFolderApp
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.Screen
 import maks.molch.dmitr.infinityfolderlauncher.dao.FolderDao
 import maks.molch.dmitr.infinityfolderlauncher.data.Folder
+import maks.molch.dmitr.infinityfolderlauncher.ui.component.FolderBackgroundPicker
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.ClickableIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.Input
 import maks.molch.dmitr.infinityfolderlauncher.ui.component.common.NavBar
@@ -71,12 +76,11 @@ fun AddFolder(
     val editing = folderToEdit != null
     val initialIconName = folderToEdit?.iconName
     val initialIconPair = remember(folderToEdit?.id) {
-        val name = initialIconName ?: "Default"
-        val source = initialIconName
-            ?.let { Icons.folderIconByName(it) }
-            ?.let { ImageSource.from(it) }
-            ?: R.drawable.infinity_folder_logo.toImageSource()
-        name to (source ?: R.drawable.infinity_folder_logo.toImageSource()!!)
+        val name = initialIconName ?: Icons.FOLDER_ICON_DEFAULT
+        val source = Icons.getAllFolderIconsMap()
+            .firstOrNull { it.first == name }?.second
+            ?: R.drawable.infinity_folder_logo.toImageSource()!!
+        name to source
     }
 
     val inputText: MutableState<String> = remember(folderToEdit?.id) {
@@ -85,6 +89,32 @@ fun AddFolder(
     val selectedNamedIcon: MutableState<Pair<String, ImageSource>> = remember(folderToEdit?.id) {
         mutableStateOf(initialIconPair)
     }
+    val context = LocalContext.current
+    val backgroundStore = remember {
+        (context.applicationContext as InfinityFolderApp).folderBackgroundStore
+    }
+    val originalBackgroundImages = remember(folderToEdit?.id) {
+        folderToEdit?.backgroundImages.orEmpty()
+    }
+    val selectedBackgroundPreset: MutableState<String?> = remember(folderToEdit?.id) {
+        mutableStateOf(
+            if (folderToEdit?.backgroundImages?.isNotEmpty() == true) {
+                null
+            } else {
+                folderToEdit?.backgroundName
+            },
+        )
+    }
+    val selectedBackgroundImages: MutableState<List<String>> = remember(folderToEdit?.id) {
+        mutableStateOf(folderToEdit?.backgroundImages.orEmpty())
+    }
+    val selectedBackgroundRotate: MutableState<Int?> = remember(folderToEdit?.id) {
+        mutableStateOf(folderToEdit?.backgroundRotateSeconds)
+    }
+    val defaultRotateSeconds by remember {
+        (context.applicationContext as InfinityFolderApp)
+            .settingsDao.defaultFolderBackgroundRotateSeconds
+    }.collectAsState()
     val iconPickerExpanded = remember { mutableStateOf(!editing) }
     val epoch by folderDao.epoch.collectAsState()
     val folderNames = remember(epoch, currentFolderId, folderToEdit?.id) {
@@ -95,10 +125,15 @@ fun AddFolder(
     }
     val trimmed = inputText.value.trim()
     val folderAlreadyExist = trimmed in folderNames
+    val nextRotateForSave =
+        if (selectedBackgroundImages.value.size >= 2) selectedBackgroundRotate.value else null
     val canSave = trimmed.isNotBlank() && !folderAlreadyExist && (
         !editing ||
             trimmed != folderToEdit.name ||
-            selectedNamedIcon.value.first != (folderToEdit.iconName ?: "Default")
+            selectedNamedIcon.value.first != (folderToEdit.iconName ?: Icons.FOLDER_ICON_DEFAULT) ||
+            selectedBackgroundPreset.value != folderToEdit.backgroundName ||
+            selectedBackgroundImages.value != folderToEdit.backgroundImages ||
+            nextRotateForSave != folderToEdit.backgroundRotateSeconds
         )
 
     fun dismiss() {
@@ -133,11 +168,21 @@ fun AddFolder(
                 color = if (editing) Green50 else Base70,
                 enabled = canSave,
             ) {
-                val iconName = selectedNamedIcon.value.first.takeIf { it != "Default" }
+                val iconName = selectedNamedIcon.value.first
+                    .takeIf { it != Icons.FOLDER_ICON_DEFAULT }
+                val backgroundImages = selectedBackgroundImages.value
+                val backgroundName =
+                    if (backgroundImages.isNotEmpty()) null else selectedBackgroundPreset.value
                 if (editing) {
                     if (
-                        folderDao.updateFolder(folderToEdit!!.id, trimmed, iconName) ==
-                        FolderDao.RenameResult.Ok
+                        folderDao.updateFolder(
+                            folderId = folderToEdit!!.id,
+                            newName = trimmed,
+                            iconName = iconName,
+                            backgroundName = backgroundName,
+                            backgroundImages = backgroundImages,
+                            backgroundRotateSeconds = nextRotateForSave,
+                        ) == FolderDao.RenameResult.Ok
                     ) {
                         dismiss()
                     }
@@ -146,6 +191,9 @@ fun AddFolder(
                         parentId = currentFolderId,
                         name = trimmed,
                         iconName = iconName,
+                        backgroundName = backgroundName,
+                        backgroundImages = backgroundImages,
+                        backgroundRotateSeconds = nextRotateForSave,
                     )
                     screen.value = Screen.Main
                 }
@@ -154,6 +202,7 @@ fun AddFolder(
         Column(
             modifier = Modifier
                 .weight(1f)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
@@ -162,6 +211,37 @@ fun AddFolder(
                 namedSelectedIcon = selectedNamedIcon,
                 expanded = iconPickerExpanded,
                 folderAlreadyExist = folderAlreadyExist,
+            )
+            FolderBackgroundPicker(
+                selectedPresetId = selectedBackgroundPreset.value,
+                selectedImageFiles = selectedBackgroundImages.value,
+                selectedRotateSeconds = selectedBackgroundRotate.value ?: defaultRotateSeconds,
+                onSelectPreset = { id ->
+                    backgroundStore.deleteAll(
+                        selectedBackgroundImages.value.filter { it !in originalBackgroundImages },
+                    )
+                    selectedBackgroundPreset.value = id
+                    selectedBackgroundImages.value = emptyList()
+                },
+                onSelectImages = { files ->
+                    backgroundStore.deleteAll(
+                        selectedBackgroundImages.value.filter { it !in originalBackgroundImages },
+                    )
+                    selectedBackgroundImages.value = files
+                    selectedBackgroundPreset.value = null
+                },
+                onSelectRotateSeconds = { seconds ->
+                    selectedBackgroundRotate.value = seconds
+                },
+                onSelectUseDefault = {
+                    backgroundStore.deleteAll(
+                        selectedBackgroundImages.value.filter { it !in originalBackgroundImages },
+                    )
+                    selectedBackgroundPreset.value = null
+                    selectedBackgroundImages.value = emptyList()
+                    selectedBackgroundRotate.value = null
+                },
+                includeUseDefault = true,
             )
         }
         if (!editing) {
