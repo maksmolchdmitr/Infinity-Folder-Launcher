@@ -20,6 +20,10 @@
     <string name="folder_background_rotate_on_navigate">Менять фото при переходе в папку</string>
     <string name="settings_main_columns">Иконок в ряду (главный экран)</string>
     <string name="settings_fix_recents">Починить системные недавние</string>
+    <string name="settings_recents_assist">Помощник системных недавних Xiaomi</string>
+    <string name="settings_recents_assist_description">Если карточка Xiaomi не открывается после нажатия, помощник закрывает и повторно открывает системные «Недавние», затем повторяет выбор этой карточки. Работает с обоими видами списка, без своего экрана недавних. Использует специальные возможности для чтения названия карточки и нажатия на экран Xiaomi. Данные не сохраняются и не отправляются.</string>
+    <string name="settings_recents_assist_open">Настроить помощник</string>
+    <string name="settings_recents_assist_unavailable">Не удалось открыть настройки специальных возможностей</string>
     <string name="settings_fix_recents_hint">Если карточки в Диспетчере не открываются — открой «Системный лаунчер» и нажми «Остановить». Это сброс бага HyperOS со сторонним лаунчером.</string>
     <string name="settings_search_columns">Иконок в ряду (поиск приложений)</string>
     <string name="add_folder">Добавить папку</string>
