@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.widget.Toast
 import maks.molch.dmitr.infinityfolderlauncher.R
 import maks.molch.dmitr.infinityfolderlauncher.Screen
 import maks.molch.dmitr.infinityfolderlauncher.dao.SettingsDao
@@ -217,7 +219,37 @@ fun SettingsScreen(
                 onFontSizeChange = settingsDao::setLabelFontSizeSp,
                 onColorChange = settingsDao::setLabelColor,
             )
+            SystemRecentsAssistCard()
             FixSystemRecentsCard()
+        }
+    }
+}
+
+@Composable
+private fun SystemRecentsAssistCard() {
+    val context = LocalContext.current
+    val available = remember {
+        runCatching { context.packageManager.getApplicationInfo("com.miui.home", 0) }.isSuccess
+    }
+    if (!available) return
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Orange20, RoundedCornerShape(28.dp))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        TextH4(text = stringResource(R.string.settings_recents_assist))
+        TextBodyS(text = stringResource(R.string.settings_recents_assist_description), color = Base70)
+        TextButton(onClick = {
+            runCatching {
+                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }.onFailure {
+                Toast.makeText(context, R.string.settings_recents_assist_unavailable, Toast.LENGTH_LONG).show()
+            }
+        }) {
+            Text(stringResource(R.string.settings_recents_assist_open), color = Green50)
         }
     }
 }
