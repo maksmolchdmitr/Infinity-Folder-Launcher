@@ -8,17 +8,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -56,7 +57,14 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.component.custom.toImageSource
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Add
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Cancel
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Done
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.FolderIconMarkDefault
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.FolderIconMarks
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.FolderIconPlateDefault
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.FolderIconPlates
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.coloredFolderIcon
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.recolorableFolderIcon
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.storedIconColor
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Right
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base40
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base5
@@ -115,6 +123,12 @@ fun AddFolder(
         (context.applicationContext as InfinityFolderApp)
             .settingsDao.defaultFolderBackgroundRotateSeconds
     }.collectAsState()
+    val selectedPlate = remember(folderToEdit?.id) {
+        mutableStateOf(folderToEdit?.iconPlateArgb?.let(::Color) ?: FolderIconPlateDefault)
+    }
+    val selectedMark = remember(folderToEdit?.id) {
+        mutableStateOf(folderToEdit?.iconMarkArgb?.let(::Color) ?: FolderIconMarkDefault)
+    }
     val iconPickerExpanded = remember { mutableStateOf(!editing) }
     val epoch by folderDao.epoch.collectAsState()
     val folderNames = remember(epoch, currentFolderId, folderToEdit?.id) {
@@ -131,6 +145,8 @@ fun AddFolder(
         !editing ||
             trimmed != folderToEdit.name ||
             selectedNamedIcon.value.first != (folderToEdit.iconName ?: Icons.FOLDER_ICON_DEFAULT) ||
+            storedIconColor(selectedPlate.value, FolderIconPlateDefault) != folderToEdit.iconPlateArgb ||
+            storedIconColor(selectedMark.value, FolderIconMarkDefault) != folderToEdit.iconMarkArgb ||
             selectedBackgroundPreset.value != folderToEdit.backgroundName ||
             selectedBackgroundImages.value != folderToEdit.backgroundImages ||
             nextRotateForSave != folderToEdit.backgroundRotateSeconds
@@ -170,6 +186,8 @@ fun AddFolder(
             ) {
                 val iconName = selectedNamedIcon.value.first
                     .takeIf { it != Icons.FOLDER_ICON_DEFAULT }
+                val iconPlateArgb = storedIconColor(selectedPlate.value, FolderIconPlateDefault)
+                val iconMarkArgb = storedIconColor(selectedMark.value, FolderIconMarkDefault)
                 val backgroundImages = selectedBackgroundImages.value
                 val backgroundName =
                     if (backgroundImages.isNotEmpty()) null else selectedBackgroundPreset.value
@@ -179,6 +197,8 @@ fun AddFolder(
                             folderId = folderToEdit!!.id,
                             newName = trimmed,
                             iconName = iconName,
+                            iconPlateArgb = iconPlateArgb,
+                            iconMarkArgb = iconMarkArgb,
                             backgroundName = backgroundName,
                             backgroundImages = backgroundImages,
                             backgroundRotateSeconds = nextRotateForSave,
@@ -191,6 +211,8 @@ fun AddFolder(
                         parentId = currentFolderId,
                         name = trimmed,
                         iconName = iconName,
+                        iconPlateArgb = iconPlateArgb,
+                        iconMarkArgb = iconMarkArgb,
                         backgroundName = backgroundName,
                         backgroundImages = backgroundImages,
                         backgroundRotateSeconds = nextRotateForSave,
@@ -211,6 +233,8 @@ fun AddFolder(
                 namedSelectedIcon = selectedNamedIcon,
                 expanded = iconPickerExpanded,
                 folderAlreadyExist = folderAlreadyExist,
+                plate = selectedPlate,
+                mark = selectedMark,
             )
             FolderBackgroundPicker(
                 selectedPresetId = selectedBackgroundPreset.value,
@@ -285,7 +309,11 @@ fun SelectFolderIcon(
     namedSelectedIcon: MutableState<Pair<String, ImageSource>>,
     expanded: MutableState<Boolean>,
     folderAlreadyExist: Boolean,
+    plate: MutableState<Color>,
+    mark: MutableState<Color>,
 ) {
+    val iconName = namedSelectedIcon.value.first
+    val preview = folderIconPreview(iconName, plate.value, mark.value)
     Column(
         modifier = Modifier
             .alpha(if (folderAlreadyExist) 0.3f else 1.0f)
@@ -315,7 +343,7 @@ fun SelectFolderIcon(
                     modifier = Modifier
                         .size(78.dp)
                         .clip(RoundedCornerShape(16.dp)),
-                    imageSource = namedSelectedIcon.value.second,
+                    imageSource = preview,
                 )
                 Icon(
                     imageVector = Icons.Right,
@@ -325,37 +353,104 @@ fun SelectFolderIcon(
                 )
             }
         } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                items(Icons.getAllFolderIconsMap()) { namedImageSource ->
-                    val selected = namedSelectedIcon.value.first == namedImageSource.first
-                    Box(
-                        modifier = Modifier
-                            .size(78.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .then(
-                                if (selected) {
-                                    Modifier.border(3.dp, Green50, RoundedCornerShape(16.dp))
-                                } else {
-                                    Modifier
-                                },
-                            )
-                            .clickable(enabled = !folderAlreadyExist) {
-                                namedSelectedIcon.value = namedImageSource
-                                expanded.value = false
-                            },
-                        contentAlignment = Alignment.Center,
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Icons.getAllFolderIconsMap().chunked(3).forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        Image(
-                            modifier = Modifier.size(78.dp),
-                            imageSource = namedImageSource.second,
-                        )
+                        row.forEach { namedImageSource ->
+                            val selected = namedSelectedIcon.value.first == namedImageSource.first
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(78.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .then(
+                                        if (selected) {
+                                            Modifier.border(3.dp, Green50, RoundedCornerShape(16.dp))
+                                        } else {
+                                            Modifier
+                                        },
+                                    )
+                                    .clickable(enabled = !folderAlreadyExist) {
+                                        namedSelectedIcon.value = namedImageSource
+                                        expanded.value = false
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Image(
+                                    modifier = Modifier.size(78.dp),
+                                    imageSource = folderIconPreview(
+                                        namedImageSource.first,
+                                        plate.value,
+                                        mark.value,
+                                    ),
+                                )
+                            }
+                        }
+                        repeat(3 - row.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
+            }
+        }
+        if (Icons.recolorableFolderIcon(iconName)) {
+            IconColorRow(
+                label = stringResource(R.string.folder_icon_plate),
+                colors = FolderIconPlates,
+                selected = plate.value,
+                onSelect = { plate.value = it },
+            )
+            IconColorRow(
+                label = stringResource(R.string.folder_icon_mark),
+                colors = FolderIconMarks,
+                selected = mark.value,
+                onSelect = { mark.value = it },
+            )
+        }
+    }
+}
+
+private fun folderIconPreview(name: String, plate: Color, mark: Color): ImageSource {
+    val colored = Icons.coloredFolderIcon(
+        name,
+        storedIconColor(plate, FolderIconPlateDefault),
+        storedIconColor(mark, FolderIconMarkDefault),
+    )
+    if (colored != null) {
+        return colored.toImageSource()
+    }
+    return Icons.getAllFolderIconsMap().first { it.first == name }.second
+}
+
+@Composable
+private fun IconColorRow(
+    label: String,
+    colors: List<Color>,
+    selected: Color,
+    onSelect: (Color) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        TextBodyS(text = label)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            colors.forEach { color ->
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(color)
+                        .border(
+                            width = if (color == selected) 2.dp else 1.dp,
+                            color = if (color == selected) Green50 else Base70,
+                            shape = CircleShape,
+                        )
+                        .clickable { onSelect(color) },
+                )
             }
         }
     }

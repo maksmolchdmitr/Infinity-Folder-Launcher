@@ -21,7 +21,6 @@ import maks.molch.dmitr.infinityfolderlauncher.data.Folder
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.AddApplication
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.AddFolder
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.AddWidgetScreen
-import maks.molch.dmitr.infinityfolderlauncher.ui.screen.LoginScreen
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.MainScreen
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.OnboardingScreen
 import maks.molch.dmitr.infinityfolderlauncher.ui.screen.SettingsScreen
@@ -83,8 +82,7 @@ class MainActivity : ComponentActivity() {
                         folderStack.clear()
                         folderStack.add(MAIN_FOLDER_ID)
                         if (screen.value != Screen.Splash &&
-                            screen.value != Screen.Onboarding &&
-                            screen.value != Screen.Login
+                            screen.value != Screen.Onboarding
                         ) {
                             screen.value = Screen.Main
                         }
@@ -127,7 +125,6 @@ class MainActivity : ComponentActivity() {
 
                         Screen.Splash -> SplashScreen(screen, onboardingDao)
                         Screen.Onboarding -> OnboardingScreen(screen, onboardingDao)
-                        Screen.Login -> LoginScreen(screen, onboardingDao)
                         Screen.AddApplication -> AddApplication(
                             this,
                             screen,
@@ -221,7 +218,6 @@ enum class Screen {
     Main,
     Splash,
     Onboarding,
-    Login,
     AddApplication,
     AddFolder,
     EditFolder,

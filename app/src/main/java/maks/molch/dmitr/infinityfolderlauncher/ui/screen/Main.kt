@@ -112,6 +112,7 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.theme.ResolvedFolderBackground
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.resolveFolderBackground
 import maks.molch.dmitr.infinityfolderlauncher.utils.MAIN_FOLDER_ID
 import maks.molch.dmitr.infinityfolderlauncher.utils.launchApp
+import maks.molch.dmitr.infinityfolderlauncher.utils.uninstallApp
 import kotlin.math.roundToInt
 
 @Composable
@@ -924,17 +925,9 @@ fun MainScreen(
                     appActionEnabled.value = false
                 },
                 onUninstall = {
-                    folderDao.removeObjectsAndSave(currentFolderId, setOf(app))
                     selectedObjects.value = setOf()
                     appActionEnabled.value = false
-                    runCatching {
-                        context.startActivity(
-                            Intent(
-                                Intent.ACTION_DELETE,
-                                Uri.parse("package:${app.packageName}"),
-                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                        )
-                    }
+                    uninstallApp(context, app.packageName)
                 },
             )
         }

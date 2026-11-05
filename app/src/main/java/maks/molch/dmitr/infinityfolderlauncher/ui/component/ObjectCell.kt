@@ -56,6 +56,7 @@ import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Cancel
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.CheckboxBlank
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.CheckboxMarked
 import maks.molch.dmitr.infinityfolderlauncher.ui.custom.Icons
+import maks.molch.dmitr.infinityfolderlauncher.ui.custom.coloredFolderIcon
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base0
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base10
 import maks.molch.dmitr.infinityfolderlauncher.ui.theme.Base40
@@ -316,11 +317,13 @@ private fun FolderPreviewIcon(
 ) {
     val full = folderDao?.getById(folder.id) ?: folder
     val iconName = full.iconName ?: folder.iconName
+    val plate = full.iconPlateArgb ?: folder.iconPlateArgb
+    val mark = full.iconMarkArgb ?: folder.iconMarkArgb
 
     if (iconName == Icons.FOLDER_ICON_APPS_PREVIEW) {
         val preview = full.launcherObjects.take(4)
         if (preview.isEmpty()) {
-            FolderStaticIcon(iconName = null)
+            FolderStaticIcon(iconName = null, plateArgb = plate, markArgb = mark)
             return
         }
         Box(
@@ -360,16 +363,21 @@ private fun FolderPreviewIcon(
         return
     }
 
-    FolderStaticIcon(iconName = iconName)
+    FolderStaticIcon(iconName = iconName, plateArgb = plate, markArgb = mark)
 }
 
 @Composable
-private fun FolderStaticIcon(iconName: String?) {
+private fun FolderStaticIcon(
+    iconName: String?,
+    plateArgb: Int? = null,
+    markArgb: Int? = null,
+) {
     val imageSource: ImageSource = when {
         iconName == null || iconName == Icons.FOLDER_ICON_DEFAULT ->
             ImageSource.from(R.drawable.infinity_folder_logo)!!
         else -> ImageSource.from(
-            Icons.folderIconByName(iconName) ?: R.drawable.infinity_folder_logo,
+            Icons.coloredFolderIcon(iconName, plateArgb, markArgb)
+                ?: R.drawable.infinity_folder_logo,
         )!!
     }
     Image(
@@ -390,10 +398,11 @@ private fun MiniChildIcon(child: LauncherObject, packageManager: PackageManager)
 
         is Folder -> {
             val nestedName = child.iconName?.takeIf {
-                it != Icons.FOLDER_ICON_APPS_PREVIEW
+                it != Icons.FOLDER_ICON_APPS_PREVIEW && it != Icons.FOLDER_ICON_DEFAULT
             }
             val imageSource = ImageSource.from(
-                nestedName?.let(Icons::folderIconByName) ?: R.drawable.infinity_folder_logo,
+                nestedName?.let { Icons.coloredFolderIcon(it, child.iconPlateArgb, child.iconMarkArgb) }
+                    ?: R.drawable.infinity_folder_logo,
             )!!
             Image(
                 modifier = Modifier.size(24.dp),

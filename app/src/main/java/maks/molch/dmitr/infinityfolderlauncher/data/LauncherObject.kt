@@ -18,6 +18,8 @@ data class Folder(
     override val name: String,
     val launcherObjects: List<LauncherObject> = emptyList(),
     val iconName: String? = null,
+    val iconPlateArgb: Int? = null,
+    val iconMarkArgb: Int? = null,
     /** Named preset from FolderBackgrounds; null = use Settings default. */
     val backgroundName: String? = null,
     /** App-private image file names under folder_backgrounds/; wins over [backgroundName]. */

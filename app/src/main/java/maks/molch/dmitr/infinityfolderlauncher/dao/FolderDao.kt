@@ -32,6 +32,7 @@ class FolderDao(
     init {
         migrateIfNeeded()
         ensureRoot()
+        persistNestedFolders()
     }
 
     fun getById(folderId: String): Folder? {
@@ -39,12 +40,16 @@ class FolderDao(
         return converter.fromJson(json, Folder::class.java)
     }
 
-    fun getOrCreate(folderId: String): Folder =
-        getById(folderId) ?: if (folderId == MAIN_FOLDER_ID) {
-            save(Folder(id = MAIN_FOLDER_ID, name = MAIN_FOLDER_NAME))
-        } else {
-            error("Unknown folder id: $folderId")
+    fun getOrCreate(folderId: String): Folder {
+        getById(folderId)?.let { return it }
+        if (folderId == MAIN_FOLDER_ID) {
+            return save(Folder(id = MAIN_FOLDER_ID, name = MAIN_FOLDER_NAME))
         }
+        val created = findEmbedded(folderId) ?: Folder(id = folderId, name = folderId)
+        saveQuiet(created)
+        bump()
+        return created
+    }
 
     fun getAll(): List<Folder> =
         folderPrefs.all.mapNotNull { (_, value) ->
@@ -68,6 +73,8 @@ class FolderDao(
         parentId: String,
         name: String,
         iconName: String?,
+        iconPlateArgb: Int? = null,
+        iconMarkArgb: Int? = null,
         backgroundName: String? = null,
         backgroundImages: List<String> = emptyList(),
         backgroundRotateSeconds: Int? = null,
@@ -78,6 +85,8 @@ class FolderDao(
             id = UUID.randomUUID().toString(),
             name = name,
             iconName = iconName,
+            iconPlateArgb = iconPlateArgb,
+            iconMarkArgb = iconMarkArgb,
             backgroundName = backgroundName,
             backgroundImages = backgroundImages,
             backgroundRotateSeconds = backgroundRotateSeconds,
@@ -145,6 +154,20 @@ class FolderDao(
         bump()
     }
 
+    fun removeApplicationsByPackage(packageName: String) {
+        if (packageName.isBlank()) return
+        var changed = false
+        for (folder in getAll()) {
+            val filtered = folder.launcherObjects.filterNot {
+                it is Application && it.packageName == packageName
+            }
+            if (filtered.size == folder.launcherObjects.size) continue
+            saveQuiet(folder.copy(launcherObjects = filtered))
+            changed = true
+        }
+        if (changed) bump()
+    }
+
     fun renameFolder(folderId: String, newName: String): RenameResult =
         updateFolder(
             folderId = folderId,
@@ -161,6 +184,8 @@ class FolderDao(
         folderId: String,
         newName: String,
         iconName: String?,
+        iconPlateArgb: Int? = null,
+        iconMarkArgb: Int? = null,
         keepIcon: Boolean = false,
         backgroundName: String? = null,
         backgroundImages: List<String> = emptyList(),
@@ -176,6 +201,8 @@ class FolderDao(
 
         val folder = getById(folderId) ?: return RenameResult.NotFound
         val nextIcon = if (keepIcon) folder.iconName else iconName
+        val nextPlate = if (keepIcon) folder.iconPlateArgb else iconPlateArgb
+        val nextMark = if (keepIcon) folder.iconMarkArgb else iconMarkArgb
         val nextBackground = if (keepBackground) folder.backgroundName else backgroundName
         val nextBackgroundImages =
             if (keepBackground) folder.backgroundImages else backgroundImages
@@ -184,7 +211,9 @@ class FolderDao(
         val nextDistinct = requireDistinctObjects ?: folder.requireDistinctObjects
         val nextDeleteContents = deleteContentsOnRemove ?: folder.deleteContentsOnRemove
         val nameUnchanged = folder.name == trimmed
-        val iconUnchanged = folder.iconName == nextIcon
+        val iconUnchanged = folder.iconName == nextIcon &&
+            folder.iconPlateArgb == nextPlate &&
+            folder.iconMarkArgb == nextMark
         val backgroundUnchanged =
             folder.backgroundName == nextBackground &&
                 folder.backgroundImages == nextBackgroundImages &&
@@ -211,6 +240,8 @@ class FolderDao(
             folder.copy(
                 name = trimmed,
                 iconName = nextIcon,
+                iconPlateArgb = nextPlate,
+                iconMarkArgb = nextMark,
                 backgroundName = nextBackground,
                 backgroundImages = nextBackgroundImages,
                 backgroundRotateSeconds = nextRotate,
@@ -226,6 +257,8 @@ class FolderDao(
                     child.copy(
                         name = trimmed,
                         iconName = nextIcon,
+                        iconPlateArgb = nextPlate,
+                        iconMarkArgb = nextMark,
                         backgroundName = nextBackground,
                         backgroundImages = nextBackgroundImages,
                         backgroundRotateSeconds = nextRotate,
@@ -365,6 +398,29 @@ class FolderDao(
             saveQuiet(Folder(id = MAIN_FOLDER_ID, name = MAIN_FOLDER_NAME))
             bump()
         }
+    }
+
+    private fun findEmbedded(folderId: String): Folder? =
+        getAll().firstNotNullOfOrNull { parent ->
+            parent.launcherObjects.filterIsInstance<Folder>().firstOrNull { it.id == folderId }
+        }
+
+    private fun persistNestedFolders() {
+        var changed = false
+        val seen = mutableSetOf<String>()
+        fun walk(folder: Folder) {
+            if (!seen.add(folder.id)) return
+            if (getById(folder.id) == null) {
+                saveQuiet(folder)
+                changed = true
+            }
+            val stored = getById(folder.id) ?: folder
+            for (child in stored.launcherObjects) {
+                if (child is Folder) walk(child)
+            }
+        }
+        for (folder in getAll()) walk(folder)
+        if (changed) bump()
     }
 
     private fun migrateIfNeeded() {

@@ -68,9 +68,12 @@
     <string name="remove_from_folder">Убрать из папки</string>
     <string name="uninstall_app">Удалить с телефона</string>
     <string name="uninstall_confirm">Удалить приложение с устройства?</string>
+    <string name="uninstall_failed">Не удалось открыть удаление</string>
     <string name="clear_selected">Убрать %1$d объект(ов) из папки?</string>
     <string name="clear_selected_desc">Объекты исчезнут из этой папки. Приложения на телефоне останутся.</string>
     <string name="select_folder_icon">Иконка папки</string>
+    <string name="folder_icon_plate">Фон иконки</string>
+    <string name="folder_icon_mark">Рисунок</string>
     <string name="folder_icon_apps_preview">Превью приложений</string>
     <string name="create">Создать</string>
     <string name="invalid_url">Укажите корректный URL</string>
@@ -91,9 +94,5 @@
     <string name="exit_selection_title">Есть выбранные объекты</string>
     <string name="exit_selection_clear">Отменить выделение и выйти</string>
     <string name="exit_selection_move">Переместить объекты</string>
-    <string name="login_no_account">У меня нет аккаунта</string>
-    <string name="login_or">или войти через</string>
-    <string name="login_vk">VK ID</string>
-    <string name="login_yandex">Yandex ID</string>
     <string name="app_info">О приложении</string>
 </resources>

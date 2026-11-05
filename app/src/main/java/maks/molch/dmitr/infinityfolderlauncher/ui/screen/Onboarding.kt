@@ -217,5 +217,6 @@ private fun finish(
     onboardingDao: OnboardingDao
 ) {
     onboardingDao.setOnboardingCompleted()
-    screen.value = Screen.Login
+    onboardingDao.setLoginCompleted()
+    screen.value = Screen.Main
 }

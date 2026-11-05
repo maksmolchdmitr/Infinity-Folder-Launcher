@@ -28,8 +28,13 @@ class InfinityFolderApp : Application() {
     override fun onCreate() {
         super.onCreate()
         folderBackgroundStore = FolderBackgroundStore(this)
-        applicationDao = ApplicationDao(this).also { it.start() }
         folderDao = FolderDao(this, folderBackgroundStore)
+        applicationDao = ApplicationDao(this).also { dao ->
+            dao.onPackageRemoved = { packageName ->
+                folderDao.removeApplicationsByPackage(packageName)
+            }
+            dao.start()
+        }
         onboardingDao = OnboardingDao(this)
         settingsDao = SettingsDao(this)
         faviconCache = FaviconCache(this)

@@ -105,11 +105,11 @@ class LauncherWidgetController(
     }
 
     fun startListening() {
-        host.startListening()
+        runCatching { host.startListening() }
     }
 
     fun stopListening() {
-        host.stopListening()
+        runCatching { host.stopListening() }
     }
 
     fun startPick(folderId: String) {

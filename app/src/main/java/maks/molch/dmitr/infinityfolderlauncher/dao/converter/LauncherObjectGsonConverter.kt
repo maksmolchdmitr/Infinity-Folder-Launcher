@@ -81,6 +81,8 @@ class FolderTypeAdapter : JsonSerializer<Folder>, JsonDeserializer<Folder> {
             addProperty("id", folder.id)
             addProperty("name", folder.name)
             folder.iconName?.let { addProperty("iconName", it) }
+            folder.iconPlateArgb?.let { addProperty("iconPlateArgb", it) }
+            folder.iconMarkArgb?.let { addProperty("iconMarkArgb", it) }
             folder.backgroundName?.let { addProperty("backgroundName", it) }
             if (folder.backgroundImages.isNotEmpty()) {
                 val images = JsonArray(folder.backgroundImages.size)
@@ -117,6 +119,8 @@ class FolderTypeAdapter : JsonSerializer<Folder>, JsonDeserializer<Folder> {
         val id = json.get("id")?.takeUnless { it.isJsonNull }?.asString
             ?: UUID.randomUUID().toString()
         val iconName = json.get("iconName")?.takeUnless { it.isJsonNull }?.asString
+        val iconPlateArgb = json.get("iconPlateArgb")?.takeUnless { it.isJsonNull }?.asInt
+        val iconMarkArgb = json.get("iconMarkArgb")?.takeUnless { it.isJsonNull }?.asInt
         val backgroundName = json.get("backgroundName")?.takeUnless { it.isJsonNull }?.asString
         val backgroundImages = buildList {
             json.getAsJsonArray("backgroundImages")?.forEach { el ->
@@ -146,6 +150,8 @@ class FolderTypeAdapter : JsonSerializer<Folder>, JsonDeserializer<Folder> {
             name = name,
             launcherObjects = launcherObjects,
             iconName = iconName,
+            iconPlateArgb = iconPlateArgb,
+            iconMarkArgb = iconMarkArgb,
             backgroundName = backgroundName,
             backgroundImages = backgroundImages,
             backgroundRotateSeconds = backgroundRotateSeconds,

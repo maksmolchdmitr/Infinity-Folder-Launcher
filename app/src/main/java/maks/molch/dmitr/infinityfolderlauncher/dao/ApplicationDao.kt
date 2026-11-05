@@ -30,6 +30,7 @@ class ApplicationDao(context: Context) {
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
     private var receiverRegistered = false
+    var onPackageRemoved: ((String) -> Unit)? = null
 
     private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -38,6 +39,7 @@ class ApplicationDao(context: Context) {
                 Intent.ACTION_PACKAGE_REMOVED -> {
                     if (intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) return
                     removePackage(packageName)
+                    onPackageRemoved?.invoke(packageName)
                 }
 
                 Intent.ACTION_PACKAGE_ADDED,
